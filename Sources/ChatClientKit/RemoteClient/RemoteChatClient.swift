@@ -79,7 +79,8 @@ public final class RemoteChatClient: ChatService {
     }
 
     public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
-        logger.info("starting non-streaming request to model: \(self.model) with \(body.messages.count) messages")
+        let this = self
+        logger.info("starting non-streaming request to model: \(this.model) with \(body.messages.count) messages")
         let startTime = Date()
 
         let requestBody = resolve(body: body, stream: false)
@@ -108,7 +109,8 @@ public final class RemoteChatClient: ChatService {
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         let requestBody = resolve(body: body, stream: true)
         let request = try makeURLRequest(body: requestBody)
-        logger.info("starting streaming request to model: \(self.model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
+        let this = self
+        logger.info("starting streaming request to model: \(this.model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
 
         let processor = RemoteChatStreamProcessor(
             eventSourceFactory: eventSourceFactory,

@@ -94,15 +94,16 @@ extension MLXChatClient {
     }
 
     func loadContainer(adjusting userInput: inout UserInput) async throws -> ModelContainer {
+        let this = self
         switch preferredKind {
         case .llm:
             let container = try await coordinator.container(for: modelConfiguration, kind: .llm)
-            logger.info("successfully loaded LLM model: \(self.modelConfiguration.name)")
+            logger.info("successfully loaded LLM model: \(this.modelConfiguration.name)")
             userInput.images = []
             return container
         case .vlm:
             let container = try await coordinator.container(for: modelConfiguration, kind: .vlm)
-            logger.info("successfully loaded VLM model: \(self.modelConfiguration.name)")
+            logger.info("successfully loaded VLM model: \(this.modelConfiguration.name)")
             if userInput.images.isEmpty { userInput.images.append(.ciImage(emptyImage)) }
             return container
         }
