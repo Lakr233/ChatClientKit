@@ -97,12 +97,12 @@ extension MLXChatClient {
         switch preferredKind {
         case .llm:
             let container = try await coordinator.container(for: modelConfiguration, kind: .llm)
-            logger.infoFile("successfully loaded LLM model: \(modelConfiguration.name)")
+            logger.info("successfully loaded LLM model: \(self.modelConfiguration.name)")
             userInput.images = []
             return container
         case .vlm:
             let container = try await coordinator.container(for: modelConfiguration, kind: .vlm)
-            logger.infoFile("successfully loaded VLM model: \(modelConfiguration.name)")
+            logger.info("successfully loaded VLM model: \(self.modelConfiguration.name)")
             if userInput.images.isEmpty { userInput.images.append(.ciImage(emptyImage)) }
             return container
         }

@@ -48,9 +48,9 @@ struct RemoteChatStreamProcessor {
                 for await event in streamTask.events() {
                     switch event {
                     case .open:
-                        logger.infoFile("connection was opened.")
+                        logger.info("connection was opened.")
                     case let .error(error):
-                        logger.errorFile("received an error: \(error)")
+                        logger.error("received an error: \(error)")
                         await collectError(error)
                     case let .event(event):
                         guard let data = event.data?.data(using: .utf8) else {
@@ -59,7 +59,7 @@ struct RemoteChatStreamProcessor {
                         if let text = String(data: data, encoding: .utf8),
                            text.lowercased() == "[done]".lowercased()
                         {
-                            logger.debugFile("received done from upstream")
+                            logger.debug("received done from upstream")
                             continue
                         }
 
@@ -104,7 +104,7 @@ struct RemoteChatStreamProcessor {
                             await collectError(decodeError)
                         }
                     case .closed:
-                        logger.infoFile("connection was closed.")
+                        logger.info("connection was closed.")
                     }
                 }
 
@@ -116,7 +116,7 @@ struct RemoteChatStreamProcessor {
                 for call in toolCallCollector.pendingRequests {
                     continuation.yield(.tool(call: call))
                 }
-                logger.infoFile("streaming completed: received \(chunkCount) chunks, total content length: \(totalContentLength), tool calls: \(toolCallCollector.pendingRequests.count)")
+                logger.info("streaming completed: received \(chunkCount) chunks, total content length: \(totalContentLength), tool calls: \(toolCallCollector.pendingRequests.count)")
                 continuation.finish()
             }
         }

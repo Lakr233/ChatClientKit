@@ -34,12 +34,12 @@ struct RemoteChatRequestBuilder {
         additionalField: [String: Any]
     ) throws -> URLRequest {
         guard let baseURL else {
-            logger.errorFile("invalid base URL")
+            logger.error("invalid base URL")
             throw RemoteChatClient.Error.invalidURL
         }
 
         guard let apiKey else {
-            logger.errorFile("invalid API key")
+            logger.error("invalid API key")
             throw RemoteChatClient.Error.invalidApiKey
         }
 
@@ -51,7 +51,7 @@ struct RemoteChatRequestBuilder {
         guard var baseComponents = URLComponents(string: baseURL),
               let pathComponents = URLComponents(string: normalizedPath)
         else {
-            logger.errorFile(
+            logger.error(
                 "failed to parse URL components from baseURL: \(baseURL), path: \(normalizedPath)"
             )
             throw RemoteChatClient.Error.invalidURL
@@ -61,11 +61,11 @@ struct RemoteChatRequestBuilder {
         baseComponents.queryItems = pathComponents.queryItems
 
         guard let url = baseComponents.url else {
-            logger.errorFile("failed to construct final URL from components")
+            logger.error("failed to construct final URL from components")
             throw RemoteChatClient.Error.invalidURL
         }
 
-        logger.debugFile("constructed request URL: \(url.absoluteString)")
+        logger.debug("constructed request URL: \(url.absoluteString)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

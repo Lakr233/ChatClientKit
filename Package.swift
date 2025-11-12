@@ -16,8 +16,6 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.21.3"),
         .package(url: "https://github.com/ml-explore/mlx-swift-examples", branch: "main"),
-        .package(url: "https://github.com/mattt/eventsource.git", from: "1.1.1"),
-        .package(path: "../Logger"),
     ],
     targets: [
         .target(
@@ -28,13 +26,9 @@ let package = Package(
                 .product(name: "MLXLLM", package: "mlx-swift-examples"),
                 .product(name: "MLXVLM", package: "mlx-swift-examples"),
                 .product(name: "MLXLMCommon", package: "mlx-swift-examples"),
-                .product(name: "EventSource", package: "EventSource"),
-                .product(name: "Logger", package: "Logger"),
             ]
         ),
-        .target(name: "ServerEvent", dependencies: [
-            .product(name: "Logger", package: "Logger"),
-        ]),
+        .target(name: "ServerEvent"),
         .testTarget(
             name: "ChatClientKitTests",
             dependencies: ["ChatClientKit"]

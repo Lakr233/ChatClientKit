@@ -197,7 +197,6 @@ public extension EventSource {
 
                 continuation.onTermination = { @Sendable [weak self] _ in
                     sessionDelegateTask.cancel()
-                    logger.debugFile("cancelling event source dataTask due to task termination")
                     urlSession.invalidateAndCancel()
                     Task { self?.close(stream: continuation, urlSession: urlSession) }
                 }

@@ -5,6 +5,6 @@
 
 import Foundation
 
-@_exported import Logger
+import OSLog
 
-let logger = Logger.chatService
+let logger = Logger(subsystem: "ChatClientKit", category: "ChatClientKit")

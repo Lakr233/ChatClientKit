@@ -57,12 +57,12 @@ extension MLXChatClient {
                             }
 
                             if decodeResult.shouldStop || regularContentOutputLength >= body.maxCompletionTokens ?? 4096 {
-                                logger.infoFile("reached max completion tokens: \(regularContentOutputLength)")
+                                logger.info("reached max completion tokens: \(regularContentOutputLength)")
                                 return .stop
                             }
 
                             if Task.isCancelled {
-                                logger.debugFile("cancelling current inference due to Task.isCancelled")
+                                logger.debug("cancelling current inference due to Task.isCancelled")
                                 return .stop
                             }
 
@@ -79,20 +79,20 @@ extension MLXChatClient {
                             continuation.yield(.chatCompletionChunk(chunk: finalChunk))
                         }
 
-                        logger.infoFile("inference completed, total output length: \(output.count), regular content: \(regularContentOutputLength)")
+                        logger.info("inference completed, total output length: \(output.count), regular content: \(regularContentOutputLength)")
                         continuation.finish()
                     } catch is CancellationError {
-                        logger.debugFile("inference cancelled for token: \(token.uuidString)")
+                        logger.debug("inference cancelled for token: \(token.uuidString)")
                         continuation.finish()
                     } catch {
-                        logger.errorFile("inference failed: \(error.localizedDescription)")
+                        logger.error("inference failed: \(error.localizedDescription)")
                         continuation.finish(throwing: error)
                     }
                 }
 
                 continuation.onTermination = { @Sendable reason in
                     guard case .cancelled = reason else { return }
-                    logger.debugFile("stream cancelled before completion for token: \(token.uuidString)")
+                    logger.debug("stream cancelled before completion for token: \(token.uuidString)")
                     workerTask.cancel()
                     MLXChatClientQueue.shared.release(token: token)
                 }
@@ -155,12 +155,12 @@ private struct ChunkDecoder {
         guard let lastToken else { return false }
         let text = context.tokenizer.decode(tokens: [lastToken]).trimmingCharacters(in: .whitespacesAndNewlines)
         if !isReasoning, text == REASONING_START_TOKEN {
-            logger.infoFile("starting reasoning with token \(text)")
+            logger.info("starting reasoning with token \(text)")
             isReasoning = true
             return true
         }
         if isReasoning, text == REASONING_END_TOKEN {
-            logger.infoFile("end reasoning with token \(text)")
+            logger.info("end reasoning with token \(text)")
             isReasoning = false
             return true
         }
