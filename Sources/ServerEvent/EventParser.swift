@@ -12,7 +12,7 @@ public protocol EventParser: Sendable {
     mutating func parse(_ data: Data) -> [EVEvent]
 }
 
-/// ``ServerEventParser`` is used to parse text data into ``ServerEvent``.
+/// ``ServerEventParser`` is used to parse text data into ``ServerSentEvent``.
 struct ServerEventParser: EventParser {
     private let mode: EventSource.Mode
     private var buffer = Data()
@@ -33,7 +33,7 @@ struct ServerEventParser: EventParser {
 
     private func parseBuffer(for rawMessages: [Data]) -> [EVEvent] {
         // Parse data to ServerMessage model
-        let messages: [ServerEvent] = rawMessages.compactMap { ServerEvent.parse(from: $0, mode: mode) }
+        let messages: [ServerSentEvent] = rawMessages.compactMap { ServerSentEvent.parse(from: $0, mode: mode) }
 
         return messages
     }
@@ -85,31 +85,5 @@ struct ServerEventParser: EventParser {
             .joined(separator: [Self.lf])
 
         return Data(cleanedLines)
-    }
-}
-
-private extension Data {
-    @available(macOS, deprecated: 13.0, obsoleted: 13.0, message: "This method is not recommended on macOS 13.0+")
-    @available(iOS, deprecated: 16.0, obsoleted: 16.0, message: "This method is not recommended on iOS 16.0+")
-    @available(watchOS, deprecated: 9.0, obsoleted: 9.0, message: "This method is not recommended on watchOS 9.0+")
-    @available(tvOS, deprecated: 16.0, obsoleted: 16.0, message: "This method is not recommended on tvOS 16.0+")
-    @available(visionOS, deprecated: 1.0, obsoleted: 1.1, message: "This method is not recommended on visionOS 1.0+")
-    func split(by separator: [UInt8]) -> [Data] {
-        var chunks: [Data] = []
-        var pos = startIndex
-        // Find next occurrence of separator after current position
-        while let r = self[pos...].range(of: Data(separator)) {
-            // Append if non-empty
-            if r.lowerBound > pos {
-                chunks.append(self[pos ..< r.lowerBound])
-            }
-            // Update current position
-            pos = r.upperBound
-        }
-        // Append final chunk, if non-empty
-        if pos < endIndex {
-            chunks.append(self[pos ..< endIndex])
-        }
-        return chunks
     }
 }

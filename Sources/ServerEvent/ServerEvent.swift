@@ -46,7 +46,7 @@ public extension EVEvent {
 }
 
 /// Default implementation of ``EventSourceEvent`` used in the package.
-public struct ServerEvent: EVEvent {
+public struct ServerSentEvent: EVEvent {
     public var id: String?
     public var event: String?
     public var data: String?
@@ -67,7 +67,7 @@ public struct ServerEvent: EVEvent {
         self.time = time
     }
 
-    public static func parse(from data: Data, mode: EventSource.Mode = .default) -> ServerEvent? {
+    public static func parse(from data: Data, mode: EventSource.Mode = .default) -> ServerSentEvent? {
         let rows: [Data] = switch mode {
         case .default:
             data.split(separator: ServerEventParser.lf) // Separate event fields
@@ -75,7 +75,7 @@ public struct ServerEvent: EVEvent {
             [data] // Do not split data in data-only mode
         }
 
-        var message = ServerEvent()
+        var message = ServerSentEvent()
 
         for row in rows {
             // Skip the line if it is empty or it starts with a colon character
