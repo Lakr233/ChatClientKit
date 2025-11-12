@@ -10,7 +10,7 @@ import Foundation
 @preconcurrency import MLX
 import Testing
 
-@Suite("MLX ChatClient Integration")
+@Suite("MLX ChatClient Integration", .serialized)
 struct MLXChatClientIntegrationTests {
     @Test("Local MLX chat completion returns content", .enabled(if: TestHelpers.isMLXModelAvailable))
     func localModelProducesContent() async throws {

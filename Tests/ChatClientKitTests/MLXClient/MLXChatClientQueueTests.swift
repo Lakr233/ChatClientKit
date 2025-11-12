@@ -9,7 +9,7 @@
 import Foundation
 import Testing
 
-@Suite("MLX Chat Client Queue")
+@Suite("MLX Chat Client Queue", .serialized)
 struct MLXChatClientQueueTests {
     private actor AcquisitionTracker {
         private var didAcquire = false

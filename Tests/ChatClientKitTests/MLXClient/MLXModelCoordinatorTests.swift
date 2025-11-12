@@ -13,7 +13,7 @@ import Foundation
 @preconcurrency import MLXVLM
 import Testing
 
-@Suite("MLX Model Coordinator")
+@Suite("MLX Model Coordinator", .serialized)
 struct MLXModelCoordinatorTests {
     @Test("Coordinator caches containers for identical configuration and kind")
     func coordinator_cachesContainerForSameKey() async throws {
