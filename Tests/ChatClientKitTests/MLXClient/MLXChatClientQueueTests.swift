@@ -84,11 +84,10 @@ struct MLXChatClientQueueTests {
         queue.release(token: firstToken)
         firstTokenReleased = true
 
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await secondTask.value
+
         let acquiredAfterRelease = await tracker.value()
         #expect(acquiredAfterRelease == true)
-
-        await secondTask.value
     }
 
     @Test("Queue allows only a single MLX inference at a time", .enabled(if: TestHelpers.checkGPU()))

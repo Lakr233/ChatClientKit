@@ -1,0 +1,71 @@
+name: Release ChatClientKit
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build dynamic library (${{ matrix.arch }})
+    runs-on: macos-13
+    strategy:
+      matrix:
+        arch: [arm64, x86_64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.arch }} binary
+        run: Scripts/build-dylib.sh ${{ matrix.arch }} build/${{ matrix.arch }}
+
+      - name: Upload ${{ matrix.arch }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChatClientKit-${{ matrix.arch }}
+          path: build/${{ matrix.arch }}
+          if-no-files-found: error
+
+  bundle:
+    name: Bundle XCFramework
+    runs-on: macos-13
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ChatClientKit-arm64
+          path: build/arm64
+
+      - name: Download x86_64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ChatClientKit-x86_64
+          path: build/x86_64
+
+      - name: Create XCFramework
+        run: Scripts/create-xcframework.sh ChatClientKit ChatClientKit.xcframework build/arm64 build/x86_64
+
+      - name: Compress XCFramework
+        run: ditto -c -k --sequesterRsrc --keepParent ChatClientKit.xcframework ChatClientKit.xcframework.zip
+
+      - name: Upload XCFramework artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChatClientKit.xcframework
+          path: ChatClientKit.xcframework.zip
+          if-no-files-found: error
+
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ChatClientKit.xcframework.zip
+          generate_release_notes: true

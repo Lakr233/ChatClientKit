@@ -19,7 +19,7 @@ public final class MLXChatClientQueue: @unchecked Sendable {
     @discardableResult
     public func acquire() -> UUID {
         let token = UUID()
-        logger.debugFile("MLXChatClientQueue.acquire token: \(token.uuidString)")
+        logger.debug("MLXChatClientQueue.acquire token: \(token.uuidString)")
         semaphore.wait()
 
         lock.lock()
@@ -36,7 +36,7 @@ public final class MLXChatClientQueue: @unchecked Sendable {
             return
         }
 
-        logger.debugFile("MLXChatClientQueue.release token: \(token.uuidString)")
+        logger.debug("MLXChatClientQueue.release token: \(token.uuidString)")
         semaphore.signal()
     }
 }

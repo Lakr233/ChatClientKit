@@ -79,16 +79,16 @@ public final class RemoteChatClient: ChatService {
     }
 
     public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
-        logger.infoFile("starting non-streaming request to model: \(model) with \(body.messages.count) messages")
+        logger.info("starting non-streaming request to model: \(self.model) with \(body.messages.count) messages")
         let startTime = Date()
 
         let requestBody = resolve(body: body, stream: false)
         let request = try makeURLRequest(body: requestBody)
         let (data, _) = try await session.data(for: request)
-        logger.debugFile("received response data: \(data.count) bytes")
+        logger.debug("received response data: \(data.count) bytes")
 
         if let error = errorExtractor.extractError(from: data) {
-            logger.errorFile("received error from server: \(error.localizedDescription)")
+            logger.error("received error from server: \(error.localizedDescription)")
             throw error
         }
 
@@ -99,7 +99,7 @@ public final class RemoteChatClient: ChatService {
         let response = try responseDecoder.decodeResponse(from: data)
         let duration = Date().timeIntervalSince(startTime)
         let contentLength = response.choices.first?.message.content?.count ?? 0
-        logger.infoFile("completed non-streaming request in \(String(format: "%.2f", duration))s, content length: \(contentLength)")
+        logger.info("completed non-streaming request in \(String(format: "%.2f", duration))s, content length: \(contentLength)")
         return response
     }
 
@@ -108,7 +108,7 @@ public final class RemoteChatClient: ChatService {
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         let requestBody = resolve(body: body, stream: true)
         let request = try makeURLRequest(body: requestBody)
-        logger.infoFile("starting streaming request to model: \(model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
+        logger.info("starting streaming request to model: \(self.model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
 
         let processor = RemoteChatStreamProcessor(
             eventSourceFactory: eventSourceFactory,
@@ -204,6 +204,6 @@ public final class RemoteChatClient: ChatService {
             return
         }
         await errorCollector.collect(error.localizedDescription)
-        logger.errorFile("collected error: \(error.localizedDescription)")
+        logger.error("collected error: \(error.localizedDescription)")
     }
 }

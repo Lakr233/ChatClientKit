@@ -31,7 +31,7 @@ public final class MLXChatClient: ChatService {
     }
 
     public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
-        logger.infoFile("starting non-streaming chat completion request with \(body.messages.count) messages")
+        logger.info("starting non-streaming chat completion request with \(body.messages.count) messages")
         let startTime = Date()
         let resolvedBody = resolve(body: body, stream: false)
         let choiceMessage: ChoiceMessage = try await streamingChatCompletionRequest(body: resolvedBody)
@@ -55,7 +55,7 @@ public final class MLXChatClient: ChatService {
             }
         let timestamp = Int(Date.now.timeIntervalSince1970)
         let duration = Date().timeIntervalSince(startTime)
-        logger.infoFile("completed non-streaming request in \(String(format: "%.2f", duration))s, content length: \(choiceMessage.content?.count ?? 0)")
+        logger.info("completed non-streaming request in \(String(format: "%.2f", duration))s, content length: \(choiceMessage.content?.count ?? 0)")
         return .init(
             choices: [.init(message: choiceMessage)],
             created: timestamp,
@@ -67,12 +67,12 @@ public final class MLXChatClient: ChatService {
         body: ChatRequestBody
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         let resolvedBody = resolve(body: body, stream: true)
-        logger.infoFile("starting streaming chat completion request with \(resolvedBody.messages.count) messages, max tokens: \(resolvedBody.maxCompletionTokens ?? 4096)")
+        logger.info("starting streaming chat completion request with \(resolvedBody.messages.count) messages, max tokens: \(resolvedBody.maxCompletionTokens ?? 4096)")
         let token = MLXChatClientQueue.shared.acquire()
         do {
             return try await streamingChatCompletionRequestExecute(body: resolvedBody, token: token)
         } catch {
-            logger.errorFile("streaming request failed: \(error.localizedDescription)")
+            logger.error("streaming request failed: \(error.localizedDescription)")
             MLXChatClientQueue.shared.release(token: token)
             throw error
         }
