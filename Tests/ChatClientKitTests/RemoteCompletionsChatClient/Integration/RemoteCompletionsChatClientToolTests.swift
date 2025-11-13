@@ -1,5 +1,5 @@
 //
-//  RemoteChatClientToolTests.swift
+//  RemoteCompletionsChatClientToolTests.swift
 //  ChatClientKitTests
 //
 //  Created by Test Suite on 2025/11/10.
@@ -9,8 +9,8 @@
 import Foundation
 import Testing
 
-@Suite("RemoteChatClient Tool Tests")
-struct RemoteChatClientToolTests {
+@Suite("RemoteCompletionsChatClient Tool Tests")
+struct RemoteCompletionsChatToolTests {
     @Test("Non-streaming chat completion with tool calls", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
     func nonStreamingChatCompletionWithTools() async throws {
         let client = TestHelpers.makeOpenRouterClient()

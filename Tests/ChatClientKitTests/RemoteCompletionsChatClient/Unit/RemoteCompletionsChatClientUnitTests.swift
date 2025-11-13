@@ -1,5 +1,5 @@
 //
-//  RemoteChatClientUnitTests.swift
+//  RemoteCompletionsChatClientUnitTests.swift
 //  ChatClientKitTests
 //
 //  Created by Test Suite on 2025/11/10.
@@ -10,8 +10,8 @@ import Foundation
 import ServerEvent
 import Testing
 
-@Suite("RemoteChatClient Unit Tests")
-struct RemoteChatClientUnitTests {
+@Suite("RemoteCompletionsChatClient Unit Tests")
+struct RemoteCompletionsChatClientUnitTests {
     @Test("Chat completion request decodes reasoning and includes additional fields")
     func chatCompletionRequest_decodesReasoningAndIncludesAdditionalFields() async throws {
         let responseJSON: [String: Any] = [
@@ -44,7 +44,7 @@ struct RemoteChatClientUnitTests {
             reasoningParser: ReasoningContentParser()
         )
 
-        let client = RemoteChatClient(
+        let client = RemoteCompletionsChatClient(
             model: "gpt-test",
             baseURL: "https://example.com",
             path: "/v1/chat/completions",
@@ -111,7 +111,7 @@ struct RemoteChatClientUnitTests {
             reasoningParser: ReasoningContentParser()
         )
 
-        let client = RemoteChatClient(
+        let client = RemoteCompletionsChatClient(
             model: "gpt-test",
             baseURL: "https://example.com",
             path: "/v1/chat/completions",
@@ -163,7 +163,7 @@ struct RemoteChatClientUnitTests {
             reasoningParser: ReasoningContentParser()
         )
 
-        let client = RemoteChatClient(
+        let client = RemoteCompletionsChatClient(
             model: "gpt-test",
             baseURL: "https://example.com",
             path: "/v1/chat/completions",
@@ -210,7 +210,7 @@ struct RemoteChatClientUnitTests {
             reasoningParser: ReasoningContentParser()
         )
 
-        let client = RemoteChatClient(
+        let client = RemoteCompletionsChatClient(
             model: "gpt-test",
             baseURL: "https://example.com",
             path: "/v1/chat/completions",

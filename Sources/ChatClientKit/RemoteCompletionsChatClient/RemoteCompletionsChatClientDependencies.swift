@@ -1,5 +1,5 @@
 //
-//  RemoteChatClientDependencies.swift
+//  RemoteCompletionsChatClientDependencies.swift
 //  ChatClientKit
 //
 //  Created by GPT-5 Codex on 2025/11/10.

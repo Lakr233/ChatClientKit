@@ -1,5 +1,5 @@
 //
-//  RemoteChatClient.swift
+//  RemoteCompletionsChatClient.swift
 //  ChatClientKit
 //
 //  Created by ktiays on 2025/2/12.
@@ -9,7 +9,9 @@
 import Foundation
 import ServerEvent
 
-public final class RemoteChatClient: ChatService {
+// public typealias RemoteChatClient = RemoteCompletionsChatClient
+
+public final class RemoteCompletionsChatClient: ChatService {
     /// The ID of the model to use.
     ///
     /// The required section should be in alphabetical order.

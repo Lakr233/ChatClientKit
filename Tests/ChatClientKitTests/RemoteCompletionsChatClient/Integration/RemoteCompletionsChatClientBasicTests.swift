@@ -1,5 +1,5 @@
 //
-//  RemoteChatClientBasicTests.swift
+//  RemoteCompletionsChatClientBasicTests.swift
 //  ChatClientKitTests
 //
 //  Created by Test Suite on 2025/11/10.
@@ -9,8 +9,8 @@
 import Foundation
 import Testing
 
-@Suite("RemoteChatClient Basic Tests")
-struct RemoteChatClientBasicTests {
+@Suite("RemoteCompletionsChatClient Basic Tests")
+struct RemoteCompletionsChatClientBasicTests {
     @Test("Non-streaming chat completion with text message", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
     func nonStreamingChatCompletion() async throws {
         let client = TestHelpers.makeOpenRouterClient()

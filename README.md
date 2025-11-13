@@ -39,7 +39,7 @@ targets: [
 ```swift
 import ChatClientKit
 
-let client = RemoteChatClient(
+let client = RemoteCompletionsChatClient(
     model: "gpt-4o-mini",
     baseURL: "https://api.openai.com/v1/chat/completions",
     apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"],
@@ -131,7 +131,7 @@ do {
 ```
 
 ## Architecture at a Glance
-- `ChatService` is the core abstraction; `RemoteChatClient`, `MLXChatClient`, and `AppleIntelligenceChatClient` conform to it.
+- `ChatService` is the core abstraction; `RemoteCompletionsChatClient`, `MLXChatClient`, and `AppleIntelligenceChatClient` conform to it.
 - `RemoteClient` uses Server-Sent Events via the `ServerEvent` helper target plus `RemoteChatStreamProcessor` to decode incremental JSON chunks.
 - `MLXClient` wraps MLX, MLXLLM, and MLXVLM to coordinate weights, vision inputs, and request queues for on-device inference.
 - `FoundationModels` bridges Apple Intelligence personas, prompt building, and tool proxies with `LanguageModelSession`.

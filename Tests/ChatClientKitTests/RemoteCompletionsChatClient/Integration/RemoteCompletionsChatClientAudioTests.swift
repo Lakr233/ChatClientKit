@@ -1,5 +1,5 @@
 //
-//  RemoteChatClientAudioTests.swift
+//  RemoteCompletionsChatClientAudioTests.swift
 //  ChatClientKitTests
 //
 //  Created by Test Suite on 2025/11/10.
@@ -9,8 +9,8 @@
 import Foundation
 import Testing
 
-@Suite("RemoteChatClient Audio Tests")
-struct RemoteChatClientAudioTests {
+@Suite("RemoteCompletionsChatClient Audio Tests")
+struct RemoteCompletionsChatClientAudioTests {
     @Test("Non-streaming chat completion with audio input", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
     func nonStreamingChatCompletionWithAudio() async throws {
         let client = TestHelpers.makeOpenRouterClient()

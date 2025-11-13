@@ -50,11 +50,11 @@ enum TestHelpers {
         return value
     }
 
-    /// Creates a RemoteChatClient configured for OpenRouter with google/gemini-2.5-pro
+    /// Creates a RemoteCompletionsChatClient configured for OpenRouter with google/gemini-2.5-pro
     /// Precondition: API key must be configured (check with isOpenRouterAPIKeyConfigured before using)
-    static func makeOpenRouterClient() -> RemoteChatClient {
+    static func makeOpenRouterClient() -> RemoteCompletionsChatClient {
         let apiKey = requireAPIKey()
-        return RemoteChatClient(
+        return RemoteCompletionsChatClient(
             model: "google/gemini-2.5-pro",
             baseURL: "https://openrouter.ai/api",
             path: "/v1/chat/completions",

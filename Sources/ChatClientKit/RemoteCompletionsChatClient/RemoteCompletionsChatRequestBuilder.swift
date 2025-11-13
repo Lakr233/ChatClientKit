@@ -1,5 +1,5 @@
 //
-//  RemoteChatRequestBuilder.swift
+//  RemoteCompletionsChatRequestBuilder.swift
 //  ChatClientKit
 //
 //  Created by GPT-5 Codex on 2025/11/10.
@@ -35,12 +35,12 @@ struct RemoteChatRequestBuilder {
     ) throws -> URLRequest {
         guard let baseURL else {
             logger.error("invalid base URL")
-            throw RemoteChatClient.Error.invalidURL
+            throw RemoteCompletionsChatClient.Error.invalidURL
         }
 
         guard let apiKey else {
             logger.error("invalid API key")
-            throw RemoteChatClient.Error.invalidApiKey
+            throw RemoteCompletionsChatClient.Error.invalidApiKey
         }
 
         var normalizedPath = path ?? ""
@@ -54,7 +54,7 @@ struct RemoteChatRequestBuilder {
             logger.error(
                 "failed to parse URL components from baseURL: \(baseURL), path: \(normalizedPath)"
             )
-            throw RemoteChatClient.Error.invalidURL
+            throw RemoteCompletionsChatClient.Error.invalidURL
         }
 
         baseComponents.path += pathComponents.path
@@ -62,7 +62,7 @@ struct RemoteChatRequestBuilder {
 
         guard let url = baseComponents.url else {
             logger.error("failed to construct final URL from components")
-            throw RemoteChatClient.Error.invalidURL
+            throw RemoteCompletionsChatClient.Error.invalidURL
         }
 
         logger.debug("constructed request URL: \(url.absoluteString)")

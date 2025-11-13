@@ -1,5 +1,5 @@
 //
-//  RemoteChatClientImageTests.swift
+//  RemoteCompletionsChatClientImageTests.swift
 //  ChatClientKitTests
 //
 //  Created by Test Suite on 2025/11/10.
@@ -9,8 +9,8 @@
 import Foundation
 import Testing
 
-@Suite("RemoteChatClient Image Tests")
-struct RemoteChatClientImageTests {
+@Suite("RemoteCompletionsChatClient Image Tests")
+struct RemoteCompletionsChatClientImageTests {
     @Test("Non-streaming chat completion with image input", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
     func nonStreamingChatCompletionWithImage() async throws {
         let client = TestHelpers.makeOpenRouterClient()

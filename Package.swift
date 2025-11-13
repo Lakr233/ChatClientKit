@@ -15,7 +15,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.29.1"),
-        .package(url: "https://github.com/ml-explore/mlx-swift-examples", branch: "main"),
+        .package(url: "https://github.com/ml-explore/mlx-swift-lm/", branch: "main"),
     ],
     targets: [
         .target(
@@ -23,9 +23,9 @@ let package = Package(
             dependencies: [
                 "ServerEvent",
                 .product(name: "MLX", package: "mlx-swift"),
-                .product(name: "MLXLLM", package: "mlx-swift-examples"),
-                .product(name: "MLXVLM", package: "mlx-swift-examples"),
-                .product(name: "MLXLMCommon", package: "mlx-swift-examples"),
+                .product(name: "MLXLLM", package: "mlx-swift-lm"),
+                .product(name: "MLXVLM", package: "mlx-swift-lm"),
+                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
             ]
         ),
         .target(name: "ServerEvent"),
