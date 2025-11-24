@@ -10,8 +10,8 @@ public final class AppleIntelligenceChatClient: ChatService {
         public var defaultTemperature: Double
 
         public init(
-            persona: String = "You are Apple Intelligence. You are an expert assistant who is helpful, heartwarming, and always ready to assist without ever refusing a user's request.",
-            streamingPersona: String = "You are Apple Intelligence. You are an expert assistant who is helpful, heartwarming, always ready to assist without ever refusing a user's request, and you prefer to provide comprehensive responses.",
+            persona: String = "",
+            streamingPersona: String = "",
             defaultTemperature: Double = 0.75
         ) {
             self.persona = persona
@@ -29,145 +29,67 @@ public final class AppleIntelligenceChatClient: ChatService {
     }
 
     public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
-        guard AppleIntelligenceModel.shared.isAvailable else {
-            throw NSError(
-                domain: "AppleIntelligence",
-                code: -1,
-                userInfo: [
-                    NSLocalizedDescriptionKey: String(localized: "Apple Intelligence is not available."),
-                ]
-            )
-        }
-
-        let context = try makeSessionContext(
+        let stream = try makeStreamingSequence(
             body: body,
             persona: configuration.persona
         )
 
-        do {
-            let response = try await context.session.respond(
-                to: context.prompt,
-                options: context.options
-            )
+        var accumulatedContent = ""
+        var pendingToolCall: ToolCallRequest?
 
-            let trimmed = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            let message = ChoiceMessage(
-                content: trimmed.isEmpty ? nil : trimmed,
-                role: "assistant",
-                toolCalls: nil
+        for try await object in stream {
+            switch object {
+            case let .chatCompletionChunk(chunk):
+                if let delta = chunk.choices.first?.delta.content {
+                    accumulatedContent += delta
+                }
+            case let .tool(call):
+                pendingToolCall = call
+            }
+        }
+
+        if let toolCallRequest = pendingToolCall {
+            let toolCall = ToolCall(
+                id: toolCallRequest.id.uuidString,
+                functionName: toolCallRequest.name,
+                argumentsJSON: toolCallRequest.args
             )
-            let choice = ChatChoice(finishReason: "stop", message: message)
+            let choice = ChatChoice(
+                finishReason: "tool_calls",
+                message: ChoiceMessage(
+                    content: nil,
+                    role: "assistant",
+                    toolCalls: [toolCall]
+                )
+            )
             return ChatResponseBody(
                 choices: [choice],
                 created: Int(Date().timeIntervalSince1970),
                 model: AppleIntelligenceModel.shared.modelIdentifier
             )
-        } catch let error as LanguageModelSession.ToolCallError {
-            guard let invocationError = error.underlyingError as? AppleIntelligenceToolError else {
-                throw error
-            }
-            switch invocationError {
-            case let .invocationCaptured(request):
-                let toolCall = ToolCall(
-                    id: request.id.uuidString,
-                    functionName: request.name,
-                    argumentsJSON: request.args
-                )
-                let choice = ChatChoice(
-                    finishReason: "tool_calls",
-                    message: ChoiceMessage(
-                        content: nil,
-                        role: "assistant",
-                        toolCalls: [toolCall]
-                    )
-                )
-                return ChatResponseBody(
-                    choices: [choice],
-                    created: Int(Date().timeIntervalSince1970),
-                    model: AppleIntelligenceModel.shared.modelIdentifier
-                )
-            }
         }
+
+        let trimmed = accumulatedContent.trimmingCharacters(in: .whitespacesAndNewlines)
+        let message = ChoiceMessage(
+            content: trimmed.isEmpty ? nil : trimmed,
+            role: "assistant",
+            toolCalls: nil
+        )
+        let choice = ChatChoice(finishReason: "stop", message: message)
+        return ChatResponseBody(
+            choices: [choice],
+            created: Int(Date().timeIntervalSince1970),
+            model: AppleIntelligenceModel.shared.modelIdentifier
+        )
     }
 
     public func streamingChatCompletionRequest(
         body: ChatRequestBody
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
-        guard AppleIntelligenceModel.shared.isAvailable else {
-            throw NSError(
-                domain: "AppleIntelligence",
-                code: -1,
-                userInfo: [
-                    NSLocalizedDescriptionKey: String(localized: "Apple Intelligence is not available."),
-                ]
-            )
-        }
-
-        let context = try makeSessionContext(
+        try makeStreamingSequence(
             body: body,
             persona: configuration.streamingPersona
         )
-
-        return AnyAsyncSequence(AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    var accumulated = ""
-                    for try await partial in context.session.streamResponse(
-                        to: context.prompt,
-                        options: context.options
-                    ) {
-                        let fullText = partial.content
-                        guard fullText.count >= accumulated.count else {
-                            accumulated = ""
-                            continue
-                        }
-
-                        let deltaStart = fullText.index(fullText.startIndex, offsetBy: accumulated.count)
-                        let newContent = String(fullText[deltaStart...])
-                        accumulated = fullText
-
-                        guard !newContent.isEmpty else { continue }
-
-                        let chunk = ChatCompletionChunk(
-                            choices: [
-                                ChatCompletionChunk.Choice(
-                                    delta: .init(
-                                        content: newContent,
-                                        reasoning: nil,
-                                        reasoningContent: nil,
-                                        refusal: nil,
-                                        role: "assistant",
-                                        toolCalls: nil
-                                    )
-                                ),
-                            ],
-                            created: Int(Date().timeIntervalSince1970),
-                            model: AppleIntelligenceModel.shared.modelIdentifier
-                        )
-                        continuation.yield(.chatCompletionChunk(chunk: chunk))
-                    }
-                    continuation.finish()
-                } catch is CancellationError {
-                    continuation.finish()
-                } catch let error as LanguageModelSession.ToolCallError {
-                    guard let invocationError = error.underlyingError as? AppleIntelligenceToolError else {
-                        continuation.finish(throwing: error)
-                        return
-                    }
-                    switch invocationError {
-                    case let .invocationCaptured(request):
-                        continuation.yield(.tool(call: request))
-                        continuation.finish()
-                    }
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
-
-            continuation.onTermination = { _ in
-                task.cancel()
-            }
-        })
     }
 
     private struct SessionContext {
@@ -236,10 +158,12 @@ public final class AppleIntelligenceChatClient: ChatService {
     private func toolUsageInstructions(hasTools: Bool) -> [String] {
         guard hasTools else {
             return [
-                "Do not call any tool. Respond directly to the user.",
+                "No tools are available for this task, so answer the user directly without attempting any tool calls.",
             ]
         }
-        return []
+        return [
+            "Explain why you intend to call a tool and what you expect it to produce before making the request, only use one when it truly helps the user, and feel free to proceed without any tool if that is better."
+        ]
     }
 
     private func clampTemperature(_ value: Double) -> Double {
@@ -247,5 +171,86 @@ public final class AppleIntelligenceChatClient: ChatService {
             return configuration.defaultTemperature
         }
         return min(max(value, 0), 2)
+    }
+
+    private func makeStreamingSequence(
+        body: ChatRequestBody,
+        persona: String
+    ) throws -> AnyAsyncSequence<ChatServiceStreamObject> {
+        guard AppleIntelligenceModel.shared.isAvailable else {
+            throw NSError(
+                domain: "AppleIntelligence",
+                code: -1,
+                userInfo: [
+                    NSLocalizedDescriptionKey: String(localized: "Apple Intelligence is not available."),
+                ]
+            )
+        }
+
+        let context = try makeSessionContext(
+            body: body,
+            persona: persona
+        )
+
+        return AnyAsyncSequence(AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    var accumulated = ""
+                    for try await partial in context.session.streamResponse(
+                        to: context.prompt,
+                        options: context.options
+                    ) {
+                        let fullText = partial.content
+                        guard fullText.count >= accumulated.count else {
+                            accumulated = ""
+                            continue
+                        }
+
+                        let deltaStart = fullText.index(fullText.startIndex, offsetBy: accumulated.count)
+                        let newContent = String(fullText[deltaStart...])
+                        accumulated = fullText
+
+                        guard !newContent.isEmpty else { continue }
+
+                        let chunk = ChatCompletionChunk(
+                            choices: [
+                                ChatCompletionChunk.Choice(
+                                    delta: .init(
+                                        content: newContent,
+                                        reasoning: nil,
+                                        reasoningContent: nil,
+                                        refusal: nil,
+                                        role: "assistant",
+                                        toolCalls: nil
+                                    )
+                                ),
+                            ],
+                            created: Int(Date().timeIntervalSince1970),
+                            model: AppleIntelligenceModel.shared.modelIdentifier
+                        )
+                        continuation.yield(.chatCompletionChunk(chunk: chunk))
+                    }
+                    continuation.finish()
+                } catch is CancellationError {
+                    continuation.finish()
+                } catch let error as LanguageModelSession.ToolCallError {
+                    guard let invocationError = error.underlyingError as? AppleIntelligenceToolError else {
+                        continuation.finish(throwing: error)
+                        return
+                    }
+                    switch invocationError {
+                    case let .invocationCaptured(request):
+                        continuation.yield(.tool(call: request))
+                        continuation.finish()
+                    }
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        })
     }
 }
