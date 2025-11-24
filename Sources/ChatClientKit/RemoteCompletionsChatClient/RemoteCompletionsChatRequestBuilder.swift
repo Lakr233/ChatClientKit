@@ -38,11 +38,6 @@ struct RemoteChatRequestBuilder {
             throw RemoteCompletionsChatClient.Error.invalidURL
         }
 
-        guard let apiKey else {
-            logger.error("invalid API key")
-            throw RemoteCompletionsChatClient.Error.invalidApiKey
-        }
-
         var normalizedPath = path ?? ""
         if !normalizedPath.isEmpty, !normalizedPath.starts(with: "/") {
             normalizedPath = "/\(normalizedPath)"
@@ -71,7 +66,11 @@ struct RemoteChatRequestBuilder {
         request.httpMethod = "POST"
         request.httpBody = try encoder.encode(body)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+
+        let trimmedApiKey = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedApiKey, !trimmedApiKey.isEmpty {
+            request.setValue("Bearer \(trimmedApiKey)", forHTTPHeaderField: "Authorization")
+        }
 
         for (key, value) in additionalHeaders {
             request.setValue(value, forHTTPHeaderField: key)

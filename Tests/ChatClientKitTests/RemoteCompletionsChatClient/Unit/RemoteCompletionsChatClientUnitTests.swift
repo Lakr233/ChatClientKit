@@ -80,6 +80,37 @@ struct RemoteCompletionsChatClientUnitTests {
         #expect(bodyJSON["foo"] as? String == "bar")
     }
 
+    @Test("URL request omits Authorization header when API key is empty")
+    func makeURLRequest_withoutApiKey_omitsAuthorizationHeader() throws {
+        let session = MockURLSession(result: .failure(TestError()))
+
+        let dependencies = RemoteChatClientDependencies(
+            session: session,
+            eventSourceFactory: DefaultEventSourceFactory(),
+            responseDecoderFactory: { JSONDecoderWrapper() },
+            chunkDecoderFactory: { JSONDecoderWrapper() },
+            errorExtractor: RemoteChatErrorExtractor(),
+            reasoningParser: ReasoningContentParser()
+        )
+
+        let client = RemoteCompletionsChatClient(
+            model: "gpt-test",
+            baseURL: "https://example.com",
+            path: "/v1/chat/completions",
+            apiKey: "",
+            additionalHeaders: ["cf-aig-authorization": "Bearer gateway-token"],
+            dependencies: dependencies
+        )
+
+        let request = try client.makeURLRequest(
+            from: ChatRequestBody(messages: [.user(content: .text("Hello"))]),
+            stream: false
+        )
+
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(request.value(forHTTPHeaderField: "cf-aig-authorization") == "Bearer gateway-token")
+    }
+
     @Test("Chat completion builder convenience forwards through request DSL")
     func chatCompletion_builderForwardsThroughDSL() async throws {
         let responseJSON: [String: Any] = [
