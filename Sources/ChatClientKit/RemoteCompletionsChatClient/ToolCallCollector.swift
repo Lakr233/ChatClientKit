@@ -10,6 +10,7 @@ import Foundation
 final class ToolCallCollector {
     private var functionName = ""
     private var functionArguments = ""
+    private var toolCallID: String?
     private var currentId: Int?
     private(set) var pendingRequests: [ToolCallRequest] = []
 
@@ -20,6 +21,9 @@ final class ToolCallCollector {
             finalizeCurrentDeltaContent()
         }
         currentId = delta.index
+        if let id = delta.id, !id.isEmpty {
+            toolCallID = id
+        }
 
         if let name = function.name, !name.isEmpty {
             functionName.append(name)
@@ -33,16 +37,22 @@ final class ToolCallCollector {
         guard !functionName.isEmpty || !functionArguments.isEmpty else {
             return
         }
-        let call = ToolCallRequest(name: functionName, args: functionArguments)
+        let call = ToolCallRequest(
+            id: toolCallID,
+            name: functionName,
+            args: functionArguments
+        )
         logger.debug("tool call finalized: \(call.name) with args: \(call.args)")
         pendingRequests.append(call)
         functionName = ""
         functionArguments = ""
+        toolCallID = nil
     }
 
     func reset() {
         functionName = ""
         functionArguments = ""
+        toolCallID = nil
         currentId = nil
         pendingRequests = []
     }

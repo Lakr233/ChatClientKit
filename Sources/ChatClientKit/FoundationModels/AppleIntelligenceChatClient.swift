@@ -50,7 +50,7 @@ public final class AppleIntelligenceChatClient: ChatService {
 
         if let toolCallRequest = pendingToolCall {
             let toolCall = ToolCall(
-                id: toolCallRequest.id.uuidString,
+                id: toolCallRequest.id,
                 functionName: toolCallRequest.name,
                 argumentsJSON: toolCallRequest.args
             )
