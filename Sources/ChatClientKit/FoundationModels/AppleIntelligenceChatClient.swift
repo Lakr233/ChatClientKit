@@ -162,7 +162,7 @@ public final class AppleIntelligenceChatClient: ChatService {
             ]
         }
         return [
-            "Explain why you intend to call a tool and what you expect it to produce before making the request, only use one when it truly helps the user, and feel free to proceed without any tool if that is better."
+            "Explain why you intend to call a tool and what you expect it to produce before making the request, only use one when it truly helps the user, and feel free to proceed without any tool if that is better.",
         ]
     }
 
