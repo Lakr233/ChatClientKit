@@ -137,24 +137,19 @@ public extension ChatRequest {
     }
 
     static func assistant(
-        _ text: String,
-        name: String? = nil
+        _ text: String
     ) -> BuildComponent {
-        message(.assistant(content: .text(text), name: name))
+        message(.assistant(content: .text(text)))
     }
 
     static func assistant(
         content: MessageContent<String, [String]>?,
-        name: String? = nil,
-        refusal: String? = nil,
         toolCalls: [Message.ToolCall]? = nil,
         reasoning: String? = nil,
         reasoningDetails: [ReasoningDetail]? = nil
     ) -> BuildComponent {
         message(.assistant(
             content: content,
-            name: name,
-            refusal: refusal,
             toolCalls: toolCalls,
             reasoning: reasoning,
             reasoningDetails: reasoningDetails

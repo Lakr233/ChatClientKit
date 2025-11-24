@@ -64,7 +64,7 @@ struct ReasoningDetailsTests {
 
         let body = try request.asChatRequestBody()
         #expect(body.messages.count == 2)
-        guard case let .assistant(content, _, _, _, reasoning, details) = body.messages.first else {
+        guard case let .assistant(content, _, reasoning, details) = body.messages.first else {
             Issue.record("Expected assistant message at index 0")
             return
         }

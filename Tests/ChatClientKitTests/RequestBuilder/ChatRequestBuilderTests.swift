@@ -19,7 +19,7 @@ struct ChatRequestBuilderTests {
             ChatRequest.messages {
                 ChatRequest.Message.system(content: .text("  system prompt  "))
                 ChatRequest.Message.user(content: .text(" hello  "))
-                ChatRequest.Message.assistant(content: .text(" ok "), name: " assistant ")
+                ChatRequest.Message.assistant(content: .text(" ok "))
             }
         }
 
@@ -51,15 +51,13 @@ struct ChatRequestBuilderTests {
             Issue.record("Expected user message at index 1")
         }
 
-        if case let .assistant(optionalContent, name, refusal, _, _, _) = body.messages[2] {
+        if case let .assistant(optionalContent, _, _, _) = body.messages[2] {
             switch optionalContent {
             case let .some(.text(text)):
                 #expect(text == "ok")
             default:
                 Issue.record("Expected assistant text content")
             }
-            #expect(name == "assistant")
-            #expect(refusal == nil)
         } else {
             Issue.record("Expected assistant message at index 2")
         }

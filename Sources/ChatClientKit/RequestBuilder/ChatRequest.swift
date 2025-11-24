@@ -121,11 +121,9 @@ extension ChatRequest {
 
     static func normalizeMessage(_ message: Message) -> Message {
         switch message {
-        case let .assistant(content, name, refusal, toolCalls, reasoning, reasoningDetails):
+        case let .assistant(content, toolCalls, reasoning, reasoningDetails):
             .assistant(
                 content: normalizeAssistantContent(content),
-                name: trimmed(name),
-                refusal: trimmed(refusal),
                 toolCalls: normalizeToolCalls(toolCalls),
                 reasoning: trimmed(reasoning),
                 reasoningDetails: normalizeReasoningDetails(reasoningDetails, fallback: trimmed(reasoning))
@@ -275,18 +273,15 @@ extension ChatRequest {
 
         for message in messages {
             switch message {
-            case let .assistant(content, name, refusal, toolCalls, reasoning, reasoningDetails):
+            case let .assistant(content, toolCalls, reasoning, reasoningDetails):
                 if var current = pending {
                     current.append(content: content)
                     current.append(reasoning: reasoning, details: reasoningDetails)
                     current.append(toolCalls: toolCalls)
-                    current.refusal = current.refusal ?? refusal
                     pending = current
                 } else {
                     pending = PendingAssistant(
-                        name: name,
                         content: content,
-                        refusal: refusal,
                         toolCalls: toolCalls,
                         reasoning: reasoning,
                         reasoningDetails: reasoningDetails
@@ -304,9 +299,7 @@ extension ChatRequest {
 }
 
 private struct PendingAssistant {
-    var name: String?
     var content: ChatRequest.Message.MessageContent<String, [String]>?
-    var refusal: String?
     var toolCalls: [ChatRequest.Message.ToolCall]?
     var reasoning: String?
     var reasoningDetails: [ReasoningDetail]?
@@ -366,8 +359,6 @@ private struct PendingAssistant {
     func asMessage() -> ChatRequest.Message {
         .assistant(
             content: content,
-            name: name,
-            refusal: refusal,
             toolCalls: toolCalls,
             reasoning: reasoning,
             reasoningDetails: reasoningDetails

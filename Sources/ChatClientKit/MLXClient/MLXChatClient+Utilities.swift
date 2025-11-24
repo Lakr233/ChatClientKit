@@ -22,7 +22,7 @@ extension MLXChatClient {
         var images: [UserInput.Image] = []
         for message in body.messages {
             switch message {
-            case let .assistant(content, _, _, _, _, _):
+            case let .assistant(content, _, _, _):
                 guard let content else {
                     continue
                 }

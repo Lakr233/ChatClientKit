@@ -193,8 +193,6 @@ struct RemoteCompletionsChatToolTests {
         messagesBuffer.append(contentsOf: [
             .assistant(
                 content: assistant.content.map(ChatRequestBody.Message.MessageContent.text),
-                name: nil,
-                refusal: nil,
                 toolCalls: assistant.toolCalls?.compactMap { input in
                     .init(id: input.id, function: .init(name: input.function.name, arguments: input.function.argumentsRaw))
                 },
