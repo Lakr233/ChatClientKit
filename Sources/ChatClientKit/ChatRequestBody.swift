@@ -63,7 +63,9 @@ public extension ChatRequestBody {
             content: MessageContent<String, [String]>? = nil,
             name: String? = nil,
             refusal: String? = nil,
-            toolCalls: [ToolCall]? = nil
+            toolCalls: [ToolCall]? = nil,
+            reasoning: String? = nil,
+            reasoningDetails: [ReasoningDetail]? = nil
         )
 
         /// Developer-provided instructions that the model should follow, regardless of messages sent by the user.
@@ -122,6 +124,8 @@ public extension ChatRequestBody {
         private enum RootKey: String, CodingKey, Equatable {
             case content
             case name
+            case reasoning
+            case reasoningDetails = "reasoning_details"
             case refusal
             case role
             case toolCallID = "tool_call_id"
@@ -132,9 +136,11 @@ public extension ChatRequestBody {
             var container = encoder.container(keyedBy: RootKey.self)
             try container.encode(role, forKey: .role)
             switch self {
-            case let .assistant(content, name, refusal, toolCalls):
+            case let .assistant(content, name, refusal, toolCalls, reasoning, reasoningDetails):
                 try container.encodeIfPresent(content, forKey: .content)
                 try container.encodeIfPresent(name, forKey: .name)
+                try container.encodeIfPresent(reasoning, forKey: .reasoning)
+                try container.encodeIfPresent(reasoningDetails, forKey: .reasoningDetails)
                 try container.encodeIfPresent(refusal, forKey: .refusal)
                 try container.encodeIfPresent(toolCalls, forKey: .toolCalls)
             case let .developer(content, name):
@@ -348,5 +354,21 @@ public extension ChatRequestBody {
                 try functionContainer.encodeIfPresent(strict, forKey: .strict)
             }
         }
+    }
+}
+
+public extension ChatRequestBody {
+    /// Returns a copy where adjacent assistant messages are merged into a single turn.
+    func mergingAdjacentAssistantMessages() -> ChatRequestBody {
+        var merged = ChatRequestBody(
+            messages: ChatRequest.mergeAssistantMessages(messages),
+            maxCompletionTokens: maxCompletionTokens,
+            stream: stream,
+            temperature: temperature,
+            tools: tools
+        )
+        merged.model = model
+        merged.stream = stream
+        return merged
     }
 }

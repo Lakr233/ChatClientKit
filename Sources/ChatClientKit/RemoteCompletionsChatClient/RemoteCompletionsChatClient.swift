@@ -185,7 +185,7 @@ public final class RemoteCompletionsChatClient: ChatService {
     }
 
     private func resolve(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {
-        var requestBody = body
+        var requestBody = body.mergingAdjacentAssistantMessages()
         requestBody.model = model
         requestBody.stream = stream
         return requestBody

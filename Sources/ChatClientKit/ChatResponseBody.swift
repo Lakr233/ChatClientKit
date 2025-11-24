@@ -59,6 +59,7 @@ public struct ChoiceMessage: Decodable {
     /// The reasoning behin the message.
     public var reasoning: String?
     public var reasoningContent: String?
+    public var reasoningDetails: [ReasoningDetail]?
 
     /// The role of the author of this message.
     public let role: String
@@ -70,6 +71,7 @@ public struct ChoiceMessage: Decodable {
         case content
         case reasoning
         case reasoningContent = "reasoning_content"
+        case reasoningDetails = "reasoning_details"
         case role
         case toolCalls = "tool_calls"
     }
@@ -78,18 +80,20 @@ public struct ChoiceMessage: Decodable {
         content: String? = nil,
         reasoning: String? = nil,
         reasoningContent: String? = nil,
+        reasoningDetails: [ReasoningDetail]? = nil,
         role: String,
         toolCalls: [ToolCall]? = nil
     ) {
         self.content = content
         self.reasoning = reasoning
         self.reasoningContent = reasoningContent
+        self.reasoningDetails = reasoningDetails
         self.role = role
         self.toolCalls = toolCalls
     }
 }
 
-public struct ToolCall: Decodable {
+public struct ToolCall: Decodable, Identifiable, Equatable, Sendable {
     /// The ID of the tool call.
     public let id: String
 
@@ -98,9 +102,14 @@ public struct ToolCall: Decodable {
 
     /// The function that the model instructs us to call
     public let function: Function
+
+    /// The function is not equitable
+    public static func == (lhs: ToolCall, rhs: ToolCall) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
-public struct Function: Decodable {
+public struct Function: Decodable, @unchecked Sendable {
     /// The name of the function to call.
     public let name: String
 

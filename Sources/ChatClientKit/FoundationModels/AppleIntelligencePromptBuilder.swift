@@ -52,7 +52,7 @@ enum AppleIntelligencePromptBuilder {
                 if !text.isEmpty {
                     contextLines.append(makeRoleLine(role: "User", name: name, text: text))
                 }
-            case let .assistant(content, name, _, _):
+            case let .assistant(content, name, _, _, _, _):
                 guard let assistantText = extractTextFromAssistant(content)?
                     .trimmingCharacters(in: .whitespacesAndNewlines),
                     !assistantText.isEmpty

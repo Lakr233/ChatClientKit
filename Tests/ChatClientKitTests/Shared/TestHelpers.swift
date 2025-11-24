@@ -55,7 +55,7 @@ enum TestHelpers {
     static func makeOpenRouterClient() -> RemoteCompletionsChatClient {
         let apiKey = requireAPIKey()
         return RemoteCompletionsChatClient(
-            model: "google/gemini-2.5-pro",
+            model: "google/gemini-3-pro-preview",
             baseURL: "https://openrouter.ai/api",
             path: "/v1/chat/completions",
             apiKey: apiKey,

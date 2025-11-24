@@ -147,13 +147,17 @@ public extension ChatRequest {
         content: MessageContent<String, [String]>?,
         name: String? = nil,
         refusal: String? = nil,
-        toolCalls: [Message.ToolCall]? = nil
+        toolCalls: [Message.ToolCall]? = nil,
+        reasoning: String? = nil,
+        reasoningDetails: [ReasoningDetail]? = nil
     ) -> BuildComponent {
         message(.assistant(
             content: content,
             name: name,
             refusal: refusal,
-            toolCalls: toolCalls
+            toolCalls: toolCalls,
+            reasoning: reasoning,
+            reasoningDetails: reasoningDetails
         ))
     }
 

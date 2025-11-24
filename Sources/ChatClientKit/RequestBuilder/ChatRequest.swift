@@ -114,19 +114,21 @@ public extension ChatRequest {
 
 // MARK: - Normalization Helpers
 
-private extension ChatRequest {
+extension ChatRequest {
     static func normalize(_ messages: [Message]) -> [Message] {
-        messages.map(normalizeMessage)
+        mergeAssistantMessages(messages).map(normalizeMessage)
     }
 
     static func normalizeMessage(_ message: Message) -> Message {
         switch message {
-        case let .assistant(content, name, refusal, toolCalls):
+        case let .assistant(content, name, refusal, toolCalls, reasoning, reasoningDetails):
             .assistant(
                 content: normalizeAssistantContent(content),
                 name: trimmed(name),
                 refusal: trimmed(refusal),
-                toolCalls: normalizeToolCalls(toolCalls)
+                toolCalls: normalizeToolCalls(toolCalls),
+                reasoning: trimmed(reasoning),
+                reasoningDetails: normalizeReasoningDetails(reasoningDetails, fallback: trimmed(reasoning))
             )
         case let .developer(content, name):
             .developer(content: normalizeTextContent(content), name: trimmed(name))
@@ -153,6 +155,22 @@ private extension ChatRequest {
                 .filter { !$0.isEmpty }
             return normalized.isEmpty ? nil : .parts(normalized)
         }
+    }
+
+    static func normalizeReasoningDetails(
+        _ details: [ReasoningDetail]?,
+        fallback: String?
+    ) -> [ReasoningDetail]? {
+        let merged = details?.filter { detail in
+            !(detail.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? false)
+                || detail.data != nil
+                || detail.id != nil
+        }
+        var normalized = merged ?? []
+        if normalized.isEmpty, let fallback, !fallback.isEmpty {
+            normalized = [ReasoningDetail(type: "reasoning.text", text: fallback, format: nil, index: 0)]
+        }
+        return normalized.isEmpty ? nil : normalized
     }
 
     static func normalizeTextContent(
@@ -242,5 +260,117 @@ private extension ChatRequest {
     static func trimmed(_ value: String) -> String? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Merge adjacent assistant messages so the upstream API receives a single, coherent turn.
+    static func mergeAssistantMessages(_ messages: [Message]) -> [Message] {
+        var result: [Message] = []
+        var pending: PendingAssistant?
+
+        func flushPending() {
+            guard let assistant = pending else { return }
+            result.append(assistant.asMessage())
+            pending = nil
+        }
+
+        for message in messages {
+            switch message {
+            case let .assistant(content, name, refusal, toolCalls, reasoning, reasoningDetails):
+                if var current = pending {
+                    current.append(content: content)
+                    current.append(reasoning: reasoning, details: reasoningDetails)
+                    current.append(toolCalls: toolCalls)
+                    current.refusal = current.refusal ?? refusal
+                    pending = current
+                } else {
+                    pending = PendingAssistant(
+                        name: name,
+                        content: content,
+                        refusal: refusal,
+                        toolCalls: toolCalls,
+                        reasoning: reasoning,
+                        reasoningDetails: reasoningDetails
+                    )
+                }
+            default:
+                flushPending()
+                result.append(message)
+            }
+        }
+
+        flushPending()
+        return result
+    }
+}
+
+private struct PendingAssistant {
+    var name: String?
+    var content: ChatRequest.Message.MessageContent<String, [String]>?
+    var refusal: String?
+    var toolCalls: [ChatRequest.Message.ToolCall]?
+    var reasoning: String?
+    var reasoningDetails: [ReasoningDetail]?
+
+    mutating func append(content newContent: ChatRequest.Message.MessageContent<String, [String]>?) {
+        guard let newContent else { return }
+        switch (content, newContent) {
+        case let (.text(lhs)?, .text(rhs)):
+            let separator = lhs.isEmpty || rhs.isEmpty ? "" : "\n\n"
+            content = .text(lhs + separator + rhs)
+        case let (.parts(lhs)?, .parts(rhs)):
+            content = .parts(lhs + rhs)
+        case (.text, .parts), (.parts, .text):
+            let lhsText: String = switch content {
+            case let .text(text)?: text
+            case let .parts(parts)?: parts.joined(separator: "\n")
+            case .none: ""
+            }
+            switch newContent {
+            case let .text(text): content = .text([lhsText, text].filter { !$0.isEmpty }.joined(separator: "\n\n"))
+            case let .parts(parts):
+                let combined = [lhsText, parts.joined(separator: "\n")].filter { !$0.isEmpty }
+                content = .text(combined.joined(separator: "\n\n"))
+            }
+        case (nil, _):
+            content = newContent
+        }
+    }
+
+    mutating func append(reasoning newReasoning: String?, details newDetails: [ReasoningDetail]?) {
+        if let incoming = newReasoning, !(incoming.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+            if let existing = reasoning {
+                let separator = existing.isEmpty || incoming.isEmpty ? "" : "\n"
+                reasoning = existing + separator + incoming
+            } else {
+                reasoning = incoming
+            }
+        }
+        if let newDetails, !newDetails.isEmpty {
+            var mergedDetails = reasoningDetails ?? []
+            for detail in newDetails {
+                if let index = mergedDetails.firstIndex(where: { $0.matchesContinuation(of: detail) }) {
+                    mergedDetails[index].merge(with: detail)
+                } else {
+                    mergedDetails.append(detail)
+                }
+            }
+            reasoningDetails = mergedDetails
+        }
+    }
+
+    mutating func append(toolCalls newCalls: [ChatRequest.Message.ToolCall]?) {
+        guard let newCalls, !newCalls.isEmpty else { return }
+        toolCalls = (toolCalls ?? []) + newCalls
+    }
+
+    func asMessage() -> ChatRequest.Message {
+        .assistant(
+            content: content,
+            name: name,
+            refusal: refusal,
+            toolCalls: toolCalls,
+            reasoning: reasoning,
+            reasoningDetails: reasoningDetails
+        )
     }
 }

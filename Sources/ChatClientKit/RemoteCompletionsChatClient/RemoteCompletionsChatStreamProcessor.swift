@@ -70,8 +70,14 @@ struct RemoteChatStreamProcessor {
                                 response.choices.map(\.delta).compactMap(\.reasoning),
                                 response.choices.map(\.delta).compactMap(\.reasoningContent),
                             ].flatMap(\.self).filter { !$0.isEmpty }
+                            let reasoningDetails = response.choices
+                                .compactMap(\.delta.reasoningDetails)
+                                .flatMap(\.self)
+                                .filter { detail in
+                                    !(detail.text?.isEmpty ?? true) || detail.data != nil
+                                }
 
-                            if canDecodeReasoningContent, !reasoningContent.isEmpty {
+                            if canDecodeReasoningContent, !reasoningContent.isEmpty || !reasoningDetails.isEmpty {
                                 canDecodeReasoningContent = false
                             }
 

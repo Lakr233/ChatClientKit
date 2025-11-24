@@ -12,7 +12,7 @@ import MLXVLM
 
 extension MLXChatClient {
     func resolve(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {
-        var body = body
+        var body = body.mergingAdjacentAssistantMessages()
         body.stream = stream
         return body
     }
@@ -22,7 +22,7 @@ extension MLXChatClient {
         var images: [UserInput.Image] = []
         for message in body.messages {
             switch message {
-            case let .assistant(content, _, _, _):
+            case let .assistant(content, _, _, _, _, _):
                 guard let content else {
                     continue
                 }

@@ -51,7 +51,7 @@ struct ChatRequestBuilderTests {
             Issue.record("Expected user message at index 1")
         }
 
-        if case let .assistant(optionalContent, name, refusal, _) = body.messages[2] {
+        if case let .assistant(optionalContent, name, refusal, _, _, _) = body.messages[2] {
             switch optionalContent {
             case let .some(.text(text)):
                 #expect(text == "ok")

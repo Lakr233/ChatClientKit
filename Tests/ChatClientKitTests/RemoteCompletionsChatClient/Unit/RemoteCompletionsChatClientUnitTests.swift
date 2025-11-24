@@ -65,6 +65,7 @@ struct RemoteCompletionsChatClientUnitTests {
         let choice = try #require(result.choices.first)
         #expect(choice.message.reasoningContent == "internal")
         #expect(choice.message.content == "Final answer")
+        #expect(choice.message.reasoningDetails?.isEmpty == false)
 
         let madeRequest = try #require(session.lastRequest)
         #expect(madeRequest.url?.absoluteString == "https://example.com/v1/chat/completions")

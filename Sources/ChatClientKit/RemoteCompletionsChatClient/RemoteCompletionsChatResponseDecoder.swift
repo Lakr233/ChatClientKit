@@ -24,6 +24,11 @@ struct RemoteChatResponseDecoder {
         response.choices = response.choices.map { choice in
             var mutableChoice = choice
             mutableChoice.message = reasoningParser.extractingReasoningContent(from: choice.message)
+            mutableChoice.message.reasoningDetails = AssistantTurnContent.mergeReasoningDetails(
+                existing: [],
+                incoming: mutableChoice.message.reasoningDetails,
+                fallback: mutableChoice.message.reasoning ?? mutableChoice.message.reasoningContent
+            )
             return mutableChoice
         }
         return response
