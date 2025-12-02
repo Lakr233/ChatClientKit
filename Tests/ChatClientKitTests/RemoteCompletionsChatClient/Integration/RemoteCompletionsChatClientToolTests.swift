@@ -32,14 +32,14 @@ struct RemoteCompletionsChatToolTests {
                 ],
                 "required": ["location"],
             ],
-            strict: nil
+            strict: nil,
         )
 
         let request = ChatRequestBody(
             messages: [
                 .user(content: .text("What's the weather like in San Francisco?")),
             ],
-            tools: [getWeatherTool]
+            tools: [getWeatherTool],
         )
 
         let response = try await client.chatCompletionRequest(body: request)
@@ -76,14 +76,14 @@ struct RemoteCompletionsChatToolTests {
                 ],
                 "required": ["location"],
             ],
-            strict: nil
+            strict: nil,
         )
 
         let request = ChatRequestBody(
             messages: [
                 .user(content: .text("What's the weather in New York?")),
             ],
-            tools: [getWeatherTool]
+            tools: [getWeatherTool],
         )
 
         let stream = try await client.streamingChatCompletionRequest(body: request)
@@ -123,14 +123,14 @@ struct RemoteCompletionsChatToolTests {
                 ],
                 "required": ["location"],
             ],
-            strict: nil
+            strict: nil,
         )
 
         let request = ChatRequestBody(
             messages: [
                 .user(content: .text("Get weather for London")),
             ],
-            tools: [getWeatherTool]
+            tools: [getWeatherTool],
         )
 
         let stream = try await client.streamingChatCompletionRequest(body: request)
@@ -152,7 +152,7 @@ struct RemoteCompletionsChatToolTests {
 
     @Test(
         "Tool call roundtrip preserves reasoning_details",
-        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured)
+        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
     func toolCallRoundtripPreservesReasoningDetails() async throws {
         let client = TestHelpers.makeOpenRouterClient()
@@ -167,7 +167,7 @@ struct RemoteCompletionsChatToolTests {
                 ],
                 "required": ["city"],
             ],
-            strict: nil
+            strict: nil,
         )
 
         var messagesBuffer: [ChatRequestBody.Message] = [
@@ -178,7 +178,7 @@ struct RemoteCompletionsChatToolTests {
         // First turn: force the model to call the tool.
         let firstRequest = ChatRequestBody(
             messages: messagesBuffer,
-            tools: [getWeatherTool]
+            tools: [getWeatherTool],
         )
 
         let firstResponse = try await client.chatCompletionRequest(body: firstRequest)
@@ -197,13 +197,13 @@ struct RemoteCompletionsChatToolTests {
                     .init(id: input.id, function: .init(name: input.function.name, arguments: input.function.argumentsRaw))
                 },
                 reasoning: assistant.reasoning ?? assistant.reasoningContent,
-                reasoningDetails: reasoningDetails
+                reasoningDetails: reasoningDetails,
             ),
             .tool(content: .text(toolResultJSON), toolCallID: toolCall.id),
         ])
         let followUp = ChatRequestBody(
             messages: messagesBuffer,
-            tools: [getWeatherTool]
+            tools: [getWeatherTool],
         )
 
         // Validate request body keeps reasoning_details before sending.

@@ -38,7 +38,7 @@ struct RemoteChatErrorExtractor {
             return NSError(
                 domain: domain,
                 code: status,
-                userInfo: [NSLocalizedDescriptionKey: errorMessage]
+                userInfo: [NSLocalizedDescriptionKey: errorMessage],
             )
         }
 
@@ -55,9 +55,9 @@ struct RemoteChatErrorExtractor {
                 code: code,
                 userInfo: [
                     NSLocalizedDescriptionKey: String(
-                        localized: "Server returns an error: \(code) \(message)"
+                        localized: "Server returns an error: \(code) \(message)",
                     ),
-                ]
+                ],
             )
         }
 

@@ -12,7 +12,7 @@ public final class AppleIntelligenceChatClient: ChatService {
         public init(
             persona: String = "",
             streamingPersona: String = "",
-            defaultTemperature: Double = 0.75
+            defaultTemperature: Double = 0.75,
         ) {
             self.persona = persona
             self.streamingPersona = streamingPersona
@@ -31,7 +31,7 @@ public final class AppleIntelligenceChatClient: ChatService {
     public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
         let stream = try makeStreamingSequence(
             body: body,
-            persona: configuration.persona
+            persona: configuration.persona,
         )
 
         var accumulatedContent = ""
@@ -52,20 +52,20 @@ public final class AppleIntelligenceChatClient: ChatService {
             let toolCall = ToolCall(
                 id: toolCallRequest.id,
                 functionName: toolCallRequest.name,
-                argumentsJSON: toolCallRequest.args
+                argumentsJSON: toolCallRequest.args,
             )
             let choice = ChatChoice(
                 finishReason: "tool_calls",
                 message: ChoiceMessage(
                     content: nil,
                     role: "assistant",
-                    toolCalls: [toolCall]
-                )
+                    toolCalls: [toolCall],
+                ),
             )
             return ChatResponseBody(
                 choices: [choice],
                 created: Int(Date().timeIntervalSince1970),
-                model: AppleIntelligenceModel.shared.modelIdentifier
+                model: AppleIntelligenceModel.shared.modelIdentifier,
             )
         }
 
@@ -73,22 +73,22 @@ public final class AppleIntelligenceChatClient: ChatService {
         let message = ChoiceMessage(
             content: trimmed.isEmpty ? nil : trimmed,
             role: "assistant",
-            toolCalls: nil
+            toolCalls: nil,
         )
         let choice = ChatChoice(finishReason: "stop", message: message)
         return ChatResponseBody(
             choices: [choice],
             created: Int(Date().timeIntervalSince1970),
-            model: AppleIntelligenceModel.shared.modelIdentifier
+            model: AppleIntelligenceModel.shared.modelIdentifier,
         )
     }
 
     public func streamingChatCompletionRequest(
-        body: ChatRequestBody
+        body: ChatRequestBody,
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         try makeStreamingSequence(
             body: body,
-            persona: configuration.streamingPersona
+            persona: configuration.streamingPersona,
         )
     }
 
@@ -100,14 +100,14 @@ public final class AppleIntelligenceChatClient: ChatService {
 
     private func makeSessionContext(
         body: ChatRequestBody,
-        persona: String
+        persona: String,
     ) throws -> SessionContext {
         let additionalInstructions = toolUsageInstructions(hasTools: !(body.tools ?? []).isEmpty)
 
         let instructionText = AppleIntelligencePromptBuilder.makeInstructions(
             persona: persona,
             messages: body.messages,
-            additionalDirectives: additionalInstructions
+            additionalDirectives: additionalInstructions,
         )
 
         let prompt = AppleIntelligencePromptBuilder.makePrompt(from: body.messages)
@@ -118,12 +118,12 @@ public final class AppleIntelligenceChatClient: ChatService {
         } else {
             LanguageModelSession(
                 tools: tools,
-                instructions: instructionText
+                instructions: instructionText,
             )
         }
 
         let clampedTemperature = clampTemperature(
-            body.temperature ?? configuration.defaultTemperature
+            body.temperature ?? configuration.defaultTemperature,
         )
         let options = GenerationOptions(temperature: clampedTemperature)
 
@@ -131,7 +131,7 @@ public final class AppleIntelligenceChatClient: ChatService {
     }
 
     private func makeToolProxies(
-        from tools: [ChatRequestBody.Tool]?
+        from tools: [ChatRequestBody.Tool]?,
     ) -> [any Tool] {
         guard let tools, !tools.isEmpty else { return [] }
         return tools.compactMap { tool -> (any Tool)? in
@@ -141,14 +141,14 @@ public final class AppleIntelligenceChatClient: ChatService {
                 return AppleIntelligenceToolProxy(
                     name: name,
                     description: description,
-                    schemaDescription: schemaDescription
+                    schemaDescription: schemaDescription,
                 ) as any Tool
             }
         }
     }
 
     private func renderSchemaDescription(
-        _ parameters: [String: AnyCodingValue]?
+        _ parameters: [String: AnyCodingValue]?,
     ) -> String? {
         guard let parameters else { return nil }
         guard let data = try? JSONEncoder().encode(parameters) else { return nil }
@@ -175,7 +175,7 @@ public final class AppleIntelligenceChatClient: ChatService {
 
     private func makeStreamingSequence(
         body: ChatRequestBody,
-        persona: String
+        persona: String,
     ) throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         guard AppleIntelligenceModel.shared.isAvailable else {
             throw NSError(
@@ -183,13 +183,13 @@ public final class AppleIntelligenceChatClient: ChatService {
                 code: -1,
                 userInfo: [
                     NSLocalizedDescriptionKey: String(localized: "Apple Intelligence is not available."),
-                ]
+                ],
             )
         }
 
         let context = try makeSessionContext(
             body: body,
-            persona: persona
+            persona: persona,
         )
 
         return AnyAsyncSequence(AsyncThrowingStream { continuation in
@@ -198,7 +198,7 @@ public final class AppleIntelligenceChatClient: ChatService {
                     var accumulated = ""
                     for try await partial in context.session.streamResponse(
                         to: context.prompt,
-                        options: context.options
+                        options: context.options,
                     ) {
                         let fullText = partial.content
                         guard fullText.count >= accumulated.count else {
@@ -221,12 +221,12 @@ public final class AppleIntelligenceChatClient: ChatService {
                                         reasoningContent: nil,
                                         refusal: nil,
                                         role: "assistant",
-                                        toolCalls: nil
-                                    )
+                                        toolCalls: nil,
+                                    ),
                                 ),
                             ],
                             created: Int(Date().timeIntervalSince1970),
-                            model: AppleIntelligenceModel.shared.modelIdentifier
+                            model: AppleIntelligenceModel.shared.modelIdentifier,
                         )
                         continuation.yield(.chatCompletionChunk(chunk: chunk))
                     }

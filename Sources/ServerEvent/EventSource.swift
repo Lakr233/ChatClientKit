@@ -48,7 +48,7 @@ public struct EventSource: Sendable {
     public init(
         mode: Mode = .default,
         eventParser: @autoclosure @escaping @Sendable () -> EventParser,
-        timeoutInterval: TimeInterval = 300
+        timeoutInterval: TimeInterval = 300,
     ) {
         self.mode = mode
         self.eventParser = eventParser
@@ -59,7 +59,7 @@ public struct EventSource: Sendable {
         DataTask(
             urlRequest: urlRequest,
             eventParser: eventParser(),
-            timeoutInterval: timeoutInterval
+            timeoutInterval: timeoutInterval,
         )
     }
 }
@@ -150,7 +150,7 @@ public extension EventSource {
         init(
             urlRequest: URLRequest,
             eventParser: EventParser,
-            timeoutInterval: TimeInterval
+            timeoutInterval: TimeInterval,
         ) {
             self.urlRequest = urlRequest
             _eventParser = Mutex(eventParser)
@@ -171,7 +171,7 @@ public extension EventSource {
                 let urlSession = URLSession(
                     configuration: urlSessionConfiguration,
                     delegate: sessionDelegate,
-                    delegateQueue: nil
+                    delegateQueue: nil,
                 )
                 let urlSessionDataTask = urlSession.dataTask(with: urlRequest)
 
@@ -187,7 +187,7 @@ public extension EventSource {
                                 response,
                                 stream: continuation,
                                 urlSession: urlSession,
-                                completionHandler: completionHandler
+                                completionHandler: completionHandler,
                             )
                         case let .didReceiveData(data):
                             parseMessages(from: data, stream: continuation, urlSession: urlSession)
@@ -210,7 +210,7 @@ public extension EventSource {
         private func handleSessionError(
             _ error: Error?,
             stream continuation: AsyncStream<EventType>.Continuation,
-            urlSession: URLSession
+            urlSession: URLSession,
         ) {
             guard readyState != .closed else {
                 close(stream: continuation, urlSession: urlSession)
@@ -230,7 +230,7 @@ public extension EventSource {
             _ response: URLResponse,
             stream continuation: AsyncStream<EventType>.Continuation,
             urlSession: URLSession,
-            completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+            completionHandler: @escaping (URLSession.ResponseDisposition) -> Void,
         ) {
             guard readyState != .closed else {
                 completionHandler(.cancel)
@@ -275,14 +275,14 @@ public extension EventSource {
         private func parseMessages(
             from data: Data,
             stream continuation: AsyncStream<EventType>.Continuation,
-            urlSession: URLSession
+            urlSession: URLSession,
         ) {
             if let httpResponseErrorStatusCode {
                 self.httpResponseErrorStatusCode = nil
                 handleSessionError(
                     EventSourceError.connectionError(statusCode: httpResponseErrorStatusCode, response: data),
                     stream: continuation,
-                    urlSession: urlSession
+                    urlSession: urlSession,
                 )
                 return
             }

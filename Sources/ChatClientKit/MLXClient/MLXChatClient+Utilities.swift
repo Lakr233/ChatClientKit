@@ -54,7 +54,7 @@ extension MLXChatClient {
                                 guard let resizedImage = MLXImageUtilities.resize(
                                     image: image,
                                     targetSize: .init(width: 64, height: 64),
-                                    contentMode: .contentAspectFit
+                                    contentMode: .contentAspectFit,
                                 ) else {
                                     assertionFailure()
                                     continue
@@ -65,7 +65,7 @@ extension MLXChatClient {
                                 guard let resizedImage = MLXImageUtilities.resize(
                                     image: image,
                                     targetSize: .init(width: 512, height: 512),
-                                    contentMode: .contentAspectFit
+                                    contentMode: .contentAspectFit,
                                 ) else {
                                     assertionFailure()
                                     continue

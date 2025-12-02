@@ -44,7 +44,7 @@ public final class RemoteCompletionsChatClient: ChatService {
         path: String? = nil,
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
-        additionalBodyField: [String: Any] = [:]
+        additionalBodyField: [String: Any] = [:],
     ) {
         self.init(
             model: model,
@@ -53,7 +53,7 @@ public final class RemoteCompletionsChatClient: ChatService {
             apiKey: apiKey,
             additionalHeaders: additionalHeaders,
             additionalBodyField: additionalBodyField,
-            dependencies: .live
+            dependencies: .live,
         )
     }
 
@@ -64,7 +64,7 @@ public final class RemoteCompletionsChatClient: ChatService {
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
         additionalBodyField: [String: Any] = [:],
-        dependencies: RemoteChatClientDependencies
+        dependencies: RemoteChatClientDependencies,
     ) {
         self.model = model
         self.baseURL = baseURL
@@ -97,7 +97,7 @@ public final class RemoteCompletionsChatClient: ChatService {
 
         let responseDecoder = RemoteChatResponseDecoder(
             decoder: responseDecoderFactory(),
-            reasoningParser: reasoningParser
+            reasoningParser: reasoningParser,
         )
         let response = try responseDecoder.decodeResponse(from: data)
         let duration = Date().timeIntervalSince(startTime)
@@ -107,7 +107,7 @@ public final class RemoteCompletionsChatClient: ChatService {
     }
 
     public func streamingChatCompletionRequest(
-        body: ChatRequestBody
+        body: ChatRequestBody,
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         let requestBody = resolve(body: body, stream: true)
         let request = try makeURLRequest(body: requestBody)
@@ -118,7 +118,7 @@ public final class RemoteCompletionsChatClient: ChatService {
             eventSourceFactory: eventSourceFactory,
             chunkDecoder: chunkDecoderFactory(),
             errorExtractor: errorExtractor,
-            reasoningParser: reasoningParser
+            reasoningParser: reasoningParser,
         )
 
         return processor.stream(request: request) { [weak self] error in
@@ -127,13 +127,13 @@ public final class RemoteCompletionsChatClient: ChatService {
     }
 
     public func chatCompletionRequest(
-        _ request: some ChatRequestConvertible
+        _ request: some ChatRequestConvertible,
     ) async throws -> ChatResponseBody {
         try await chatCompletionRequest(body: request.asChatRequestBody())
     }
 
     public func streamingChatCompletionRequest(
-        _ request: some ChatRequestConvertible
+        _ request: some ChatRequestConvertible,
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         try await streamingChatCompletionRequest(body: request.asChatRequestBody())
     }
@@ -150,21 +150,21 @@ public final class RemoteCompletionsChatClient: ChatService {
     /// }
     /// ```
     public func chatCompletion(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent]
+        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
     ) async throws -> ChatResponseBody {
         try await chatCompletionRequest(ChatRequest(builder))
     }
 
     /// Streams a chat completion using the Swift request DSL.
     public func streamingChatCompletion(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent]
+        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         try await streamingChatCompletionRequest(ChatRequest(builder))
     }
 
     public func makeURLRequest(
         from request: some ChatRequestConvertible,
-        stream: Bool
+        stream: Bool,
     ) throws -> URLRequest {
         let body = try resolve(body: request.asChatRequestBody(), stream: stream)
         return try makeURLRequest(body: body)
@@ -175,7 +175,7 @@ public final class RemoteCompletionsChatClient: ChatService {
             baseURL: baseURL,
             path: path,
             apiKey: apiKey,
-            additionalHeaders: additionalHeaders
+            additionalHeaders: additionalHeaders,
         )
     }
 

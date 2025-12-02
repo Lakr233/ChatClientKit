@@ -103,14 +103,14 @@ struct MLXChatClientQueueTests {
             label: "first",
             prompt: "Respond with the word FIRST and nothing else.",
             client: client,
-            tracker: tracker
+            tracker: tracker,
         ) {
             secondTask = Task(priority: .userInitiated) {
                 try await runStreamingInference(
                     label: "second",
                     prompt: "Respond with the word SECOND and nothing else.",
                     client: client,
-                    tracker: tracker
+                    tracker: tracker,
                 )
             }
         }
@@ -135,7 +135,7 @@ struct MLXChatClientQueueTests {
         prompt: String,
         client: MLXChatClient,
         tracker: TimingTracker,
-        onFirstChunk: (() -> Void)? = nil
+        onFirstChunk: (() -> Void)? = nil,
     ) async throws -> Int {
         await tracker.recordAttempt(label)
         let request = makeStreamingRequest(prompt: prompt)
@@ -170,7 +170,7 @@ struct MLXChatClientQueueTests {
             ],
             maxCompletionTokens: 64,
             stream: true,
-            temperature: 0.0
+            temperature: 0.0,
         )
     }
 }

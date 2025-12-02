@@ -82,7 +82,7 @@ public struct ChoiceMessage: Decodable {
         reasoningContent: String? = nil,
         reasoningDetails: [ReasoningDetail]? = nil,
         role: String,
-        toolCalls: [ToolCall]? = nil
+        toolCalls: [ToolCall]? = nil,
     ) {
         self.content = content
         self.reasoning = reasoning
@@ -106,6 +106,18 @@ public struct ToolCall: Decodable, Identifiable, Equatable, Sendable {
     /// The function is not equitable
     public static func == (lhs: ToolCall, rhs: ToolCall) -> Bool {
         lhs.id == rhs.id
+    }
+
+    public init(id: String, type: String, function: Function) {
+        self.id = id
+        self.type = type
+        self.function = function
+    }
+
+    public init(id: String, functionName: String, argumentsJSON: String?) {
+        self.id = id
+        type = "function"
+        function = Function(name: functionName, argumentsJSON: argumentsJSON)
     }
 }
 
@@ -134,6 +146,21 @@ public struct Function: Decodable, @unchecked Sendable {
     private enum CodingKeys: CodingKey {
         case name
         case arguments
+    }
+
+    public init(name: String, argumentsJSON: String?) {
+        self.name = name
+
+        if let argumentsJSON,
+           let data = argumentsJSON.data(using: .utf8),
+           let codingValues = try? JSONDecoder().decode([String: AnyCodingValue].self, from: data)
+        {
+            arguments = codingValues.untypedDictionary
+            argumentsRaw = argumentsJSON
+        } else {
+            arguments = nil
+            argumentsRaw = argumentsJSON
+        }
     }
 
     public init(from decoder: any Decoder) throws {

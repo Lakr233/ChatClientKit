@@ -26,12 +26,12 @@ let package = Package(
                 .product(name: "MLXLLM", package: "mlx-swift-lm"),
                 .product(name: "MLXVLM", package: "mlx-swift-lm"),
                 .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
-            ]
+            ],
         ),
         .target(name: "ServerEvent"),
         .testTarget(
             name: "ChatClientKitTests",
-            dependencies: ["ChatClientKit"]
+            dependencies: ["ChatClientKit"],
         ),
-    ]
+    ],
 )

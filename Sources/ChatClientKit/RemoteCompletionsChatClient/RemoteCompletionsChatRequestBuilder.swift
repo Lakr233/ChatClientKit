@@ -20,7 +20,7 @@ struct RemoteChatRequestBuilder {
         path: String?,
         apiKey: String?,
         additionalHeaders: [String: String],
-        encoder: JSONEncoder = JSONEncoder()
+        encoder: JSONEncoder = JSONEncoder(),
     ) {
         self.baseURL = baseURL
         self.path = path
@@ -31,7 +31,7 @@ struct RemoteChatRequestBuilder {
 
     func makeRequest(
         body: ChatRequestBody,
-        additionalField: [String: Any]
+        additionalField: [String: Any],
     ) throws -> URLRequest {
         guard let baseURL else {
             logger.error("invalid base URL")
@@ -47,7 +47,7 @@ struct RemoteChatRequestBuilder {
               let pathComponents = URLComponents(string: normalizedPath)
         else {
             logger.error(
-                "failed to parse URL components from baseURL: \(baseURL), path: \(normalizedPath)"
+                "failed to parse URL components from baseURL: \(baseURL), path: \(normalizedPath)",
             )
             throw RemoteCompletionsChatClient.Error.invalidURL
         }

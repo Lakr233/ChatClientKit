@@ -15,7 +15,7 @@ import Tokenizers
 extension MLXChatClient {
     func streamingChatCompletionRequestExecute(
         body: ChatRequestBody,
-        token: UUID
+        token: UUID,
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         var userInput = userInput(body: body)
         let generateParameters = generateParameters(body: body)
@@ -38,13 +38,13 @@ extension MLXChatClient {
                         let result = try MLXLMCommon.generate(
                             input: input,
                             parameters: generateParameters,
-                            context: context
+                            context: context,
                         ) { tokens in
                             let decodeResult = decoder.decode(
                                 tokens: tokens,
                                 latestOutputLength: &latestOutputLength,
                                 isReasoning: &isReasoning,
-                                shouldRemoveLeadingWhitespace: &shouldRemoveLeadingWhitespace
+                                shouldRemoveLeadingWhitespace: &shouldRemoveLeadingWhitespace,
                             )
 
                             if let generatedChunk = decodeResult.chunk {
@@ -74,7 +74,7 @@ extension MLXChatClient {
                             text: output,
                             previousLength: latestOutputLength,
                             isReasoning: isReasoning,
-                            shouldRemoveLeadingWhitespace: &shouldRemoveLeadingWhitespace
+                            shouldRemoveLeadingWhitespace: &shouldRemoveLeadingWhitespace,
                         ) {
                             continuation.yield(.chatCompletionChunk(chunk: finalChunk))
                         }
@@ -113,7 +113,7 @@ private struct ChunkDecoder {
         tokens: [Int],
         latestOutputLength: inout Int,
         isReasoning: inout Bool,
-        shouldRemoveLeadingWhitespace: inout Bool
+        shouldRemoveLeadingWhitespace: inout Bool,
     ) -> ChunkDecodeResult {
         var text = context.tokenizer.decode(tokens: tokens)
         let previousLength = latestOutputLength
@@ -132,7 +132,7 @@ private struct ChunkDecoder {
             text: text,
             previousLength: previousLength,
             isReasoning: isReasoning,
-            shouldRemoveLeadingWhitespace: &shouldRemoveLeadingWhitespace
+            shouldRemoveLeadingWhitespace: &shouldRemoveLeadingWhitespace,
         )
 
         var mutableText = text
@@ -171,7 +171,7 @@ private struct ChunkDecoder {
         text: String,
         previousLength: Int,
         isReasoning: Bool,
-        shouldRemoveLeadingWhitespace: inout Bool
+        shouldRemoveLeadingWhitespace: inout Bool,
     ) -> ChatCompletionChunk? {
         guard previousLength < text.count else { return nil }
         let chunkRange = previousLength ..< text.count

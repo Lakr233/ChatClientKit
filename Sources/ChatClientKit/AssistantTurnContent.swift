@@ -21,7 +21,7 @@ public struct AssistantTurnContent: Sendable, Equatable {
         reasoning: String = "",
         reasoningDetails: [ReasoningDetail] = [],
         toolCalls: [ToolCall] = [],
-        refusal: String? = nil
+        refusal: String? = nil,
     ) {
         self.content = content
         self.reasoning = reasoning
@@ -40,10 +40,10 @@ public extension ChoiceMessage {
             reasoningDetails: AssistantTurnContent.mergeReasoningDetails(
                 existing: [],
                 incoming: reasoningDetails,
-                fallback: reasoning
+                fallback: reasoning,
             ),
             toolCalls: toolCalls ?? [],
-            refusal: nil
+            refusal: nil,
         )
     }
 }
@@ -56,13 +56,13 @@ public extension ChatCompletionChunk.Choice.Delta {
         let reasoningDetails = AssistantTurnContent.mergeReasoningDetails(
             existing: [],
             incoming: reasoningDetails,
-            fallback: reasoning
+            fallback: reasoning,
         )
         return AssistantTurnContent(
             content: content,
             reasoning: reasoning,
             reasoningDetails: reasoningDetails,
-            toolCalls: AssistantTurnContent.normalizeToolCalls(from: toolCalls)
+            toolCalls: AssistantTurnContent.normalizeToolCalls(from: toolCalls),
         )
     }
 }
@@ -73,7 +73,7 @@ public extension AssistantTurnContent {
     static func mergeReasoningDetails(
         existing: [ReasoningDetail],
         incoming: [ReasoningDetail]?,
-        fallback: String?
+        fallback: String?,
     ) -> [ReasoningDetail] {
         var result = existing
         if let incoming {
@@ -95,7 +95,7 @@ public extension AssistantTurnContent {
     }
 
     static func normalizeToolCalls(
-        from deltaCalls: [ChatCompletionChunk.Choice.Delta.ToolCall]?
+        from deltaCalls: [ChatCompletionChunk.Choice.Delta.ToolCall]?,
     ) -> [ToolCall] {
         guard let deltaCalls else { return [] }
         var result: [ToolCall] = []
@@ -111,7 +111,7 @@ public extension AssistantTurnContent {
             result.append(ToolCall(
                 id: id,
                 type: type,
-                function: .init(name: name, argumentsJSON: arguments)
+                function: .init(name: name, argumentsJSON: arguments),
             ))
         }
         return result

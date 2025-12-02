@@ -25,7 +25,7 @@ public struct ReasoningDetail: Codable, Sendable, Equatable, Hashable {
         text: String? = nil,
         data: String? = nil,
         format: String? = nil,
-        index: Int? = nil
+        index: Int? = nil,
     ) {
         self.id = id
         self.type = type

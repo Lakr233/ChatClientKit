@@ -4,7 +4,7 @@ enum AppleIntelligencePromptBuilder {
     static func makeInstructions(
         persona: String,
         messages: [ChatRequestBody.Message],
-        additionalDirectives: [String]
+        additionalDirectives: [String],
     ) -> String {
         var blocks: [String] = [persona]
 
@@ -86,7 +86,7 @@ enum AppleIntelligencePromptBuilder {
 }
 
 private func extractPlainText(
-    _ content: ChatRequestBody.Message.MessageContent<String, [String]>
+    _ content: ChatRequestBody.Message.MessageContent<String, [String]>,
 ) -> String {
     switch content {
     case let .text(text):
@@ -97,7 +97,7 @@ private func extractPlainText(
 }
 
 private func extractTextFromUser(
-    _ content: ChatRequestBody.Message.MessageContent<String, [ChatRequestBody.Message.ContentPart]>
+    _ content: ChatRequestBody.Message.MessageContent<String, [ChatRequestBody.Message.ContentPart]>,
 ) -> String {
     switch content {
     case let .text(text):
@@ -110,7 +110,7 @@ private func extractTextFromUser(
 }
 
 private func extractTextFromAssistant(
-    _ content: ChatRequestBody.Message.MessageContent<String, [String]>?
+    _ content: ChatRequestBody.Message.MessageContent<String, [String]>?,
 ) -> String? {
     guard let content else { return nil }
     let text = extractPlainText(content).trimmingCharacters(in: .whitespacesAndNewlines)

@@ -53,7 +53,7 @@ public struct RemoteChatClientDependencies: Sendable {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser()
+            reasoningParser: ReasoningContentParser(),
         )
     }
 }

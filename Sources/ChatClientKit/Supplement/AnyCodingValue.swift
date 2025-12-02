@@ -53,7 +53,7 @@ public enum AnyCodingValue: Sendable, Codable {
         } else {
             throw DecodingError.dataCorruptedError(
                 in: container,
-                debugDescription: "Unexpected JSON value"
+                debugDescription: "Unexpected JSON value",
             )
         }
     }
@@ -85,7 +85,7 @@ private func convertToUntyped(_ input: AnyCodingValue) -> Any {
 }
 
 private func convertToUntypedDictionary(
-    _ input: [String: AnyCodingValue]
+    _ input: [String: AnyCodingValue],
 ) -> [String: Any] {
     input.mapValues { v in
         switch v {

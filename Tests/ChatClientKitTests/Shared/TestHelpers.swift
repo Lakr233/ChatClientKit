@@ -62,7 +62,7 @@ enum TestHelpers {
             additionalHeaders: [
                 "HTTP-Referer": "https://github.com/FlowDown/ChatClientKit",
                 "X-Title": "ChatClientKit Tests",
-            ]
+            ],
         )
     }
 
@@ -110,7 +110,7 @@ enum TestHelpers {
             bitsPerComponent: 8,
             bytesPerRow: width * 4,
             space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
         ) else {
             fatalError("Failed to create CGContext")
         }

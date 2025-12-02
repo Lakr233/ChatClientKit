@@ -18,7 +18,7 @@ struct RemoteChatStreamProcessor {
         eventSourceFactory: EventSourceProducing = DefaultEventSourceFactory(),
         chunkDecoder: JSONDecoding = JSONDecoderWrapper(),
         errorExtractor: RemoteChatErrorExtractor = RemoteChatErrorExtractor(),
-        reasoningParser: ReasoningContentParser = .init()
+        reasoningParser: ReasoningContentParser = .init(),
     ) {
         self.eventSourceFactory = eventSourceFactory
         self.chunkDecoder = chunkDecoder
@@ -28,7 +28,7 @@ struct RemoteChatStreamProcessor {
 
     func stream(
         request: URLRequest,
-        collectError: @Sendable @escaping (Swift.Error) async -> Void
+        collectError: @Sendable @escaping (Swift.Error) async -> Void,
     ) -> AnyAsyncSequence<ChatServiceStreamObject> {
         let eventSourceFactory = eventSourceFactory
         let chunkDecoder = chunkDecoder

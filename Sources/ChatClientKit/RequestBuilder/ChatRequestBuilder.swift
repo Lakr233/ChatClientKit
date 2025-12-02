@@ -10,49 +10,49 @@ import Foundation
 @resultBuilder
 public enum ChatRequestBuilder {
     public static func buildBlock(
-        _ components: [ChatRequest.BuildComponent]...
+        _ components: [ChatRequest.BuildComponent]...,
     ) -> [ChatRequest.BuildComponent] {
         components.flatMap(\.self)
     }
 
     public static func buildExpression(
-        _ expression: @escaping ChatRequest.BuildComponent
+        _ expression: @escaping ChatRequest.BuildComponent,
     ) -> [ChatRequest.BuildComponent] {
         [expression]
     }
 
     public static func buildExpression(
-        _ expression: [ChatRequest.BuildComponent]
+        _ expression: [ChatRequest.BuildComponent],
     ) -> [ChatRequest.BuildComponent] {
         expression
     }
 
     public static func buildOptional(
-        _ component: [ChatRequest.BuildComponent]?
+        _ component: [ChatRequest.BuildComponent]?,
     ) -> [ChatRequest.BuildComponent] {
         component ?? []
     }
 
     public static func buildEither(
-        first component: [ChatRequest.BuildComponent]
+        first component: [ChatRequest.BuildComponent],
     ) -> [ChatRequest.BuildComponent] {
         component
     }
 
     public static func buildEither(
-        second component: [ChatRequest.BuildComponent]
+        second component: [ChatRequest.BuildComponent],
     ) -> [ChatRequest.BuildComponent] {
         component
     }
 
     public static func buildArray(
-        _ components: [[ChatRequest.BuildComponent]]
+        _ components: [[ChatRequest.BuildComponent]],
     ) -> [ChatRequest.BuildComponent] {
         components.flatMap(\.self)
     }
 
     public static func buildLimitedAvailability(
-        _ component: [ChatRequest.BuildComponent]
+        _ component: [ChatRequest.BuildComponent],
     ) -> [ChatRequest.BuildComponent] {
         component
     }
@@ -81,7 +81,7 @@ public extension ChatRequest {
     }
 
     static func messages(
-        @ChatMessageBuilder _ builder: @Sendable @escaping () -> [Message]
+        @ChatMessageBuilder _ builder: @Sendable @escaping () -> [Message],
     ) -> BuildComponent {
         { request in
             request.messages = builder()
@@ -89,7 +89,7 @@ public extension ChatRequest {
     }
 
     static func appendMessages(
-        @ChatMessageBuilder _ builder: @Sendable @escaping () -> [Message]
+        @ChatMessageBuilder _ builder: @Sendable @escaping () -> [Message],
     ) -> BuildComponent {
         { request in
             request.messages.append(contentsOf: builder())
@@ -124,20 +124,20 @@ public extension ChatRequest {
 public extension ChatRequest {
     static func system(
         _ text: String,
-        name: String? = nil
+        name: String? = nil,
     ) -> BuildComponent {
         message(.system(content: .text(text), name: name))
     }
 
     static func developer(
         _ text: String,
-        name: String? = nil
+        name: String? = nil,
     ) -> BuildComponent {
         message(.developer(content: .text(text), name: name))
     }
 
     static func assistant(
-        _ text: String
+        _ text: String,
     ) -> BuildComponent {
         message(.assistant(content: .text(text)))
     }
@@ -146,33 +146,33 @@ public extension ChatRequest {
         content: MessageContent<String, [String]>?,
         toolCalls: [Message.ToolCall]? = nil,
         reasoning: String? = nil,
-        reasoningDetails: [ReasoningDetail]? = nil
+        reasoningDetails: [ReasoningDetail]? = nil,
     ) -> BuildComponent {
         message(.assistant(
             content: content,
             toolCalls: toolCalls,
             reasoning: reasoning,
-            reasoningDetails: reasoningDetails
+            reasoningDetails: reasoningDetails,
         ))
     }
 
     static func user(
         _ text: String,
-        name: String? = nil
+        name: String? = nil,
     ) -> BuildComponent {
         message(.user(content: .text(text), name: name))
     }
 
     static func user(
         parts: [ContentPart],
-        name: String? = nil
+        name: String? = nil,
     ) -> BuildComponent {
         message(.user(content: .parts(parts), name: name))
     }
 
     static func tool(
         _ content: MessageContent<String, [String]>,
-        toolCallID: String
+        toolCallID: String,
     ) -> BuildComponent {
         message(.tool(content: content, toolCallID: toolCallID))
     }

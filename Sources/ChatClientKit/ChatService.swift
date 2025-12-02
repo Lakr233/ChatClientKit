@@ -30,7 +30,7 @@ public protocol ChatService: AnyObject, Sendable {
     /// - Returns: An async sequence of completion chunks. See this reference:
     ///            https://platform.openai.com/docs/api-reference/chat/streaming
     func streamingChatCompletionRequest(
-        body: ChatRequestBody
+        body: ChatRequestBody,
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject>
 }
 

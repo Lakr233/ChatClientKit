@@ -13,7 +13,7 @@ struct RemoteChatResponseDecoder {
 
     init(
         decoder: JSONDecoding = JSONDecoderWrapper(),
-        reasoningParser: ReasoningContentParser = .init()
+        reasoningParser: ReasoningContentParser = .init(),
     ) {
         self.decoder = decoder
         self.reasoningParser = reasoningParser
@@ -27,7 +27,7 @@ struct RemoteChatResponseDecoder {
             mutableChoice.message.reasoningDetails = AssistantTurnContent.mergeReasoningDetails(
                 existing: [],
                 incoming: mutableChoice.message.reasoningDetails,
-                fallback: mutableChoice.message.reasoning ?? mutableChoice.message.reasoningContent
+                fallback: mutableChoice.message.reasoning ?? mutableChoice.message.reasoningContent,
             )
             return mutableChoice
         }

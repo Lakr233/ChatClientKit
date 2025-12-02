@@ -58,7 +58,7 @@ public struct ServerSentEvent: EVEvent {
         event: String? = nil,
         data: String? = nil,
         other: [String: String]? = nil,
-        time: String? = nil
+        time: String? = nil,
     ) {
         self.id = id
         self.event = event

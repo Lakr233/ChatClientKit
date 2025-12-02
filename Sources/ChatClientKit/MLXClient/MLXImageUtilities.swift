@@ -21,7 +21,7 @@ enum MLXImageUtilities {
 
     static func placeholderImage(
         size: CGSize,
-        color: CGColor = defaultColor
+        color: CGColor = defaultColor,
     ) -> CIImage {
         let ciColor = CIColor(cgColor: color)
         let image = CIImage(color: ciColor)
@@ -31,7 +31,7 @@ enum MLXImageUtilities {
     static func decodeImage(data: Data) -> CIImage? {
         if let image = CIImage(
             data: data,
-            options: [.applyOrientationProperty: true]
+            options: [.applyOrientationProperty: true],
         ) {
             return normalize(image: image)
         }
@@ -48,7 +48,7 @@ enum MLXImageUtilities {
     static func resize(
         image: CIImage,
         targetSize: CGSize,
-        contentMode: MLXImageContentMode
+        contentMode: MLXImageContentMode,
     ) -> CIImage? {
         guard targetSize.width > 0, targetSize.height > 0 else { return nil }
 
@@ -74,7 +74,7 @@ enum MLXImageUtilities {
             let scaled = normalized.transformed(by: .init(scaleX: scale, y: scale))
             let cropOrigin = CGPoint(
                 x: (scaled.extent.width - targetSize.width) / 2,
-                y: (scaled.extent.height - targetSize.height) / 2
+                y: (scaled.extent.height - targetSize.height) / 2,
             )
             let cropRect = CGRect(origin: cropOrigin, size: targetSize)
             return crop(image: scaled, to: cropRect)
@@ -88,7 +88,7 @@ enum MLXImageUtilities {
         }
         return image.transformed(by: .init(
             translationX: -extent.origin.x,
-            y: -extent.origin.y
+            y: -extent.origin.y,
         ))
     }
 

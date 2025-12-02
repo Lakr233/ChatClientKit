@@ -40,7 +40,7 @@ final class ToolCallCollector {
         let call = ToolCallRequest(
             id: toolCallID,
             name: functionName,
-            args: functionArguments
+            args: functionArguments,
         )
         logger.debug("tool call finalized: \(call.name) with args: \(call.args)")
         pendingRequests.append(call)
