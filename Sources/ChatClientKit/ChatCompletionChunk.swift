@@ -39,7 +39,7 @@ public struct ChatCompletionChunk: Sendable, Decodable {
         created: Int? = nil,
         id: String? = nil,
         model: String? = nil,
-        serviceTier: String? = nil
+        serviceTier: String? = nil,
     ) {
         self.choices = choices
         self.created = created
@@ -115,7 +115,7 @@ public extension ChatCompletionChunk.Choice {
             reasoningDetails: [ReasoningDetail]? = nil,
             refusal: String? = nil,
             role: String? = nil,
-            toolCalls: [ToolCall]? = nil
+            toolCalls: [ToolCall]? = nil,
         ) {
             self.content = content
             self.reasoning = reasoning

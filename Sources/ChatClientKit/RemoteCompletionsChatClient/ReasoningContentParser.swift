@@ -34,7 +34,7 @@ struct ReasoningContentParser: Sendable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let remainingContent = String(
             (leading + trailing)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: .whitespacesAndNewlines),
         )
 
         var newChoice = choice
@@ -55,7 +55,7 @@ struct ReasoningStreamReducer: Sendable {
 
     mutating func process(
         contentSegments: [String],
-        into chunk: inout ChatCompletionChunk
+        into chunk: inout ChatCompletionChunk,
     ) {
         guard !contentSegments.isEmpty else { return }
         reduceReasoningContent(
@@ -64,7 +64,7 @@ struct ReasoningStreamReducer: Sendable {
             reasoningContent: [],
             isInsideReasoning: &isInsideReasoningContent,
             buffer: &contentBuffer,
-            response: &chunk
+            response: &chunk,
         )
     }
 
@@ -75,7 +75,7 @@ struct ReasoningStreamReducer: Sendable {
 
         if isInsideReasoningContent {
             emittedObjects.append(.chatCompletionChunk(chunk: .init(
-                choices: [.init(delta: .init(reasoningContent: contentBuffer))]
+                choices: [.init(delta: .init(reasoningContent: contentBuffer))],
             )))
             contentBuffer = ""
             isInsideReasoningContent = false
@@ -91,7 +91,7 @@ struct ReasoningStreamReducer: Sendable {
                 reasoningContent: [],
                 isInsideReasoning: &isInsideReasoningContent,
                 buffer: &contentBuffer,
-                response: &response
+                response: &response,
             )
 
             if !response.choices.isEmpty {
@@ -106,12 +106,12 @@ struct ReasoningStreamReducer: Sendable {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 if !sanitized.isEmpty {
                     emittedObjects.append(.chatCompletionChunk(chunk: .init(
-                        choices: [.init(delta: .init(reasoningContent: sanitized))]
+                        choices: [.init(delta: .init(reasoningContent: sanitized))],
                     )))
                 }
             } else {
                 emittedObjects.append(.chatCompletionChunk(chunk: .init(
-                    choices: [.init(delta: .init(content: pendingBuffer))]
+                    choices: [.init(delta: .init(content: pendingBuffer))],
                 )))
             }
             contentBuffer = ""
@@ -127,7 +127,7 @@ private func reduceReasoningContent(
     reasoningContent: [String],
     isInsideReasoning: inout Bool,
     buffer: inout String,
-    response: inout ChatCompletionChunk
+    response: inout ChatCompletionChunk,
 ) {
     let previousBuffer = buffer
     var hasProcessedReasoningToken = isInsideReasoning
@@ -198,7 +198,7 @@ private func reduceReasoningContent(
             }
         } else {
             response = .init(choices: [.init(delta: .init(
-                reasoningContent: bufferContent
+                reasoningContent: bufferContent,
             ))])
         }
     }
@@ -220,12 +220,12 @@ private func reduceReasoningContent(
                 reasoningContent: firstChoice.delta.reasoningContent,
                 refusal: firstChoice.delta.refusal,
                 role: firstChoice.delta.role,
-                toolCalls: firstChoice.delta.toolCalls
+                toolCalls: firstChoice.delta.toolCalls,
             )
             updatedChoices[0] = .init(
                 delta: updatedDelta,
                 finishReason: firstChoice.finishReason,
-                index: firstChoice.index
+                index: firstChoice.index,
             )
             response.choices = updatedChoices
         }

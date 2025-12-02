@@ -44,7 +44,7 @@ public struct ChatRequest: Sendable {
         maxCompletionTokens: Int? = nil,
         stream: Bool? = nil,
         temperature: Double? = nil,
-        tools: [Tool]? = nil
+        tools: [Tool]? = nil,
     ) {
         self.model = model
         self.messages = messages
@@ -60,7 +60,7 @@ public struct ChatRequest: Sendable {
         stream: Bool? = nil,
         temperature: Double? = nil,
         tools: [Tool]? = nil,
-        @ChatMessageBuilder messages: @Sendable () -> [Message]
+        @ChatMessageBuilder messages: @Sendable () -> [Message],
     ) {
         self.init(
             model: model,
@@ -68,7 +68,7 @@ public struct ChatRequest: Sendable {
             maxCompletionTokens: maxCompletionTokens,
             stream: stream,
             temperature: temperature,
-            tools: tools
+            tools: tools,
         )
     }
 
@@ -84,7 +84,7 @@ extension ChatRequest: ChatRequestConvertible {
             maxCompletionTokens: maxCompletionTokens,
             stream: stream,
             temperature: temperature,
-            tools: tools.map(Self.normalizeTools)
+            tools: tools.map(Self.normalizeTools),
         )
         body.model = Self.trimmed(model)
         return body
@@ -126,7 +126,7 @@ extension ChatRequest {
                 content: normalizeAssistantContent(content),
                 toolCalls: normalizeToolCalls(toolCalls),
                 reasoning: trimmed(reasoning),
-                reasoningDetails: normalizeReasoningDetails(reasoningDetails, fallback: trimmed(reasoning))
+                reasoningDetails: normalizeReasoningDetails(reasoningDetails, fallback: trimmed(reasoning)),
             )
         case let .developer(content, name):
             .developer(content: normalizeTextContent(content), name: trimmed(name))
@@ -140,7 +140,7 @@ extension ChatRequest {
     }
 
     static func normalizeAssistantContent(
-        _ content: MessageContent<String, [String]>?
+        _ content: MessageContent<String, [String]>?,
     ) -> MessageContent<String, [String]>? {
         guard let content else { return nil }
         switch content {
@@ -157,7 +157,7 @@ extension ChatRequest {
 
     static func normalizeReasoningDetails(
         _ details: [ReasoningDetail]?,
-        fallback: String?
+        fallback: String?,
     ) -> [ReasoningDetail]? {
         let merged = details?.filter { detail in
             !(detail.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? false)
@@ -172,7 +172,7 @@ extension ChatRequest {
     }
 
     static func normalizeTextContent(
-        _ content: MessageContent<String, [String]>
+        _ content: MessageContent<String, [String]>,
     ) -> MessageContent<String, [String]> {
         switch content {
         case let .text(text):
@@ -186,7 +186,7 @@ extension ChatRequest {
     }
 
     static func normalizeUserContent(
-        _ content: MessageContent<String, [ContentPart]>
+        _ content: MessageContent<String, [ContentPart]>,
     ) -> MessageContent<String, [ContentPart]> {
         switch content {
         case let .text(text):
@@ -211,7 +211,7 @@ extension ChatRequest {
     }
 
     static func normalizeToolCalls(
-        _ toolCalls: [Message.ToolCall]?
+        _ toolCalls: [Message.ToolCall]?,
     ) -> [Message.ToolCall]? {
         guard let toolCalls, !toolCalls.isEmpty else { return nil }
         let normalized = toolCalls.map { call in
@@ -219,8 +219,8 @@ extension ChatRequest {
                 id: trimmed(call.id) ?? call.id,
                 function: .init(
                     name: trimmed(call.function.name) ?? call.function.name,
-                    arguments: trimmed(call.function.arguments)
-                )
+                    arguments: trimmed(call.function.arguments),
+                ),
             )
         }
         return normalized.sorted { $0.id < $1.id }
@@ -237,7 +237,7 @@ extension ChatRequest {
                 name: trimmed(name) ?? name,
                 description: trimmed(description),
                 parameters: parameters,
-                strict: strict
+                strict: strict,
             )
         }
     }
@@ -284,7 +284,7 @@ extension ChatRequest {
                         content: content,
                         toolCalls: toolCalls,
                         reasoning: reasoning,
-                        reasoningDetails: reasoningDetails
+                        reasoningDetails: reasoningDetails,
                     )
                 }
             default:
@@ -361,7 +361,7 @@ private struct PendingAssistant {
             content: content,
             toolCalls: toolCalls,
             reasoning: reasoning,
-            reasoningDetails: reasoningDetails
+            reasoningDetails: reasoningDetails,
         )
     }
 }

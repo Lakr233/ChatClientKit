@@ -18,7 +18,7 @@ public enum MLXModelKind: Equatable, Sendable {
 public protocol MLXModelCoordinating: Sendable {
     func container(
         for configuration: ModelConfiguration,
-        kind: MLXModelKind
+        kind: MLXModelKind,
     ) async throws -> ModelContainer
 
     func reset() async
@@ -60,7 +60,7 @@ public actor MLXModelCoordinator: MLXModelCoordinating {
 
     public func container(
         for configuration: ModelConfiguration,
-        kind: MLXModelKind
+        kind: MLXModelKind,
     ) async throws -> ModelContainer {
         let key = CacheKey(identifier: configuration.id, kind: kind)
 

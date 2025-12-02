@@ -31,7 +31,7 @@ struct RemoteCompletionsChatClientUnitTests {
             url: URL(string: "https://example.com/v1/chat/completions")!,
             mimeType: "application/json",
             expectedContentLength: responseData.count,
-            textEncodingName: nil
+            textEncodingName: nil,
         )
         let session = MockURLSession(result: .success((responseData, response)))
 
@@ -41,7 +41,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser()
+            reasoningParser: ReasoningContentParser(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -51,7 +51,7 @@ struct RemoteCompletionsChatClientUnitTests {
             apiKey: TestHelpers.requireAPIKey(),
             additionalHeaders: ["X-Test": "value"],
             additionalBodyField: ["foo": "bar"],
-            dependencies: dependencies
+            dependencies: dependencies,
         )
 
         let request = ChatRequestBody(messages: [
@@ -90,7 +90,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser()
+            reasoningParser: ReasoningContentParser(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -99,12 +99,12 @@ struct RemoteCompletionsChatClientUnitTests {
             path: "/v1/chat/completions",
             apiKey: "",
             additionalHeaders: ["cf-aig-authorization": "Bearer gateway-token"],
-            dependencies: dependencies
+            dependencies: dependencies,
         )
 
         let request = try client.makeURLRequest(
             from: ChatRequestBody(messages: [.user(content: .text("Hello"))]),
-            stream: false
+            stream: false,
         )
 
         #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
@@ -130,7 +130,7 @@ struct RemoteCompletionsChatClientUnitTests {
             url: URL(string: "https://example.com/v1/chat/completions")!,
             mimeType: "application/json",
             expectedContentLength: responseData.count,
-            textEncodingName: nil
+            textEncodingName: nil,
         )
         let session = MockURLSession(result: .success((responseData, response)))
 
@@ -140,7 +140,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser()
+            reasoningParser: ReasoningContentParser(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -148,7 +148,7 @@ struct RemoteCompletionsChatClientUnitTests {
             baseURL: "https://example.com",
             path: "/v1/chat/completions",
             apiKey: TestHelpers.requireAPIKey(),
-            dependencies: dependencies
+            dependencies: dependencies,
         )
 
         let result = try await client.chatCompletion {
@@ -182,7 +182,7 @@ struct RemoteCompletionsChatClientUnitTests {
             url: URL(string: "https://example.com/v1/chat/completions")!,
             mimeType: "application/json",
             expectedContentLength: responseData.count,
-            textEncodingName: nil
+            textEncodingName: nil,
         )
         let session = MockURLSession(result: .success((responseData, response)))
 
@@ -192,7 +192,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser()
+            reasoningParser: ReasoningContentParser(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -200,7 +200,7 @@ struct RemoteCompletionsChatClientUnitTests {
             baseURL: "https://example.com",
             path: "/v1/chat/completions",
             apiKey: TestHelpers.requireAPIKey(),
-            dependencies: dependencies
+            dependencies: dependencies,
         )
 
         let request = ChatRequestBody(messages: [
@@ -239,7 +239,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser()
+            reasoningParser: ReasoningContentParser(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -247,7 +247,7 @@ struct RemoteCompletionsChatClientUnitTests {
             baseURL: "https://example.com",
             path: "/v1/chat/completions",
             apiKey: TestHelpers.requireAPIKey(),
-            dependencies: dependencies
+            dependencies: dependencies,
         )
 
         let request = ChatRequestBody(messages: [
@@ -338,7 +338,7 @@ private struct TestEvent: EVEvent {
         event: String? = nil,
         data: String? = nil,
         other: [String: String]? = nil,
-        time: String? = nil
+        time: String? = nil,
     ) {
         self.id = id
         self.event = event

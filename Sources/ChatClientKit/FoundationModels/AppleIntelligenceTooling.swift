@@ -22,7 +22,7 @@ struct AppleIntelligenceToolProxy: Tool {
     init(
         name: String,
         description: String?,
-        schemaDescription: String?
+        schemaDescription: String?,
     ) {
         let trimmedDescription = description?
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -44,30 +44,5 @@ struct AppleIntelligenceToolProxy: Tool {
         let payload = arguments.payload.trimmingCharacters(in: .whitespacesAndNewlines)
         let request = ToolCallRequest(name: name, args: payload.isEmpty ? "{}" : payload)
         throw AppleIntelligenceToolError.invocationCaptured(request)
-    }
-}
-
-public extension Function {
-    init(name: String, argumentsJSON: String?) {
-        self.name = name
-
-        if let argumentsJSON,
-           let data = argumentsJSON.data(using: .utf8),
-           let codingValues = try? JSONDecoder().decode([String: AnyCodingValue].self, from: data)
-        {
-            arguments = codingValues.untypedDictionary
-            argumentsRaw = argumentsJSON
-        } else {
-            arguments = nil
-            argumentsRaw = argumentsJSON
-        }
-    }
-}
-
-public extension ToolCall {
-    init(id: String, functionName: String, argumentsJSON: String?) {
-        self.id = id
-        type = "function"
-        function = Function(name: functionName, argumentsJSON: argumentsJSON)
     }
 }
