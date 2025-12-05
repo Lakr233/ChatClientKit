@@ -38,21 +38,21 @@ private struct DefaultEventStreamTask: EventStreamTask, @unchecked Sendable {
     }
 }
 
-public struct RemoteChatClientDependencies: Sendable {
+public struct RemoteCompletionsChatClientDependencies: Sendable {
     var session: URLSessioning
     var eventSourceFactory: EventSourceProducing
     var responseDecoderFactory: @Sendable () -> JSONDecoding
     var chunkDecoderFactory: @Sendable () -> JSONDecoding
-    var errorExtractor: RemoteChatErrorExtractor
+    var errorExtractor: RemoteCompletionsChatErrorExtractor
     var reasoningParser: ReasoningContentParser
 
-    static var live: RemoteChatClientDependencies {
+    static var live: RemoteCompletionsChatClientDependencies {
         .init(
             session: URLSession.shared,
             eventSourceFactory: DefaultEventSourceFactory(),
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
-            errorExtractor: RemoteChatErrorExtractor(),
+            errorExtractor: RemoteCompletionsChatErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
         )
     }

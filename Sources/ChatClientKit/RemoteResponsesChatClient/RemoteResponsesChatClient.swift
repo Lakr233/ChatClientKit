@@ -1,20 +1,14 @@
 //
-//  RemoteCompletionsChatClient.swift
+//  RemoteResponsesChatClient.swift
 //  ChatClientKit
 //
-//  Created by ktiays on 2025/2/12.
-//  Refactored by GPT-5 Codex on 2025/11/10.
+//  Created by Henri on 2025/12/2.
 //
 
 import Foundation
 import ServerEvent
 
-// public typealias RemoteChatClient = RemoteCompletionsChatClient
-
-public final class RemoteCompletionsChatClient: ChatService {
-    /// The ID of the model to use.
-    ///
-    /// The required section should be in alphabetical order.
+public final class RemoteResponsesChatClient: ChatService {
     public let model: String
     public let baseURL: String?
     public let path: String?
@@ -35,8 +29,8 @@ public final class RemoteCompletionsChatClient: ChatService {
     private let eventSourceFactory: EventSourceProducing
     private let responseDecoderFactory: @Sendable () -> JSONDecoding
     private let chunkDecoderFactory: @Sendable () -> JSONDecoding
-    private let errorExtractor: RemoteCompletionsChatErrorExtractor
-    private let reasoningParser: ReasoningContentParser
+    private let errorExtractor: RemoteResponsesChatErrorExtractor
+    private let requestTransformer: ResponsesRequestTransformer
 
     public convenience init(
         model: String,
@@ -44,7 +38,7 @@ public final class RemoteCompletionsChatClient: ChatService {
         path: String? = nil,
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
-        additionalBodyField: [String: Any] = [:],
+        additionalBodyField: [String: Any] = [:]
     ) {
         self.init(
             model: model,
@@ -53,7 +47,7 @@ public final class RemoteCompletionsChatClient: ChatService {
             apiKey: apiKey,
             additionalHeaders: additionalHeaders,
             additionalBodyField: additionalBodyField,
-            dependencies: .live,
+            dependencies: .live
         )
     }
 
@@ -64,7 +58,7 @@ public final class RemoteCompletionsChatClient: ChatService {
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
         additionalBodyField: [String: Any] = [:],
-        dependencies: RemoteCompletionsChatClientDependencies,
+        dependencies: RemoteResponsesClientDependencies
     ) {
         self.model = model
         self.baseURL = baseURL
@@ -77,48 +71,44 @@ public final class RemoteCompletionsChatClient: ChatService {
         responseDecoderFactory = dependencies.responseDecoderFactory
         chunkDecoderFactory = dependencies.chunkDecoderFactory
         errorExtractor = dependencies.errorExtractor
-        reasoningParser = dependencies.reasoningParser
+        requestTransformer = ResponsesRequestTransformer()
     }
 
     public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
         let this = self
-        logger.info("starting non-streaming request to model: \(this.model) with \(body.messages.count) messages")
+        logger.info("starting responses request to model: \(this.model) with \(body.messages.count) messages")
         let startTime = Date()
 
         let requestBody = resolve(body: body, stream: false)
         let request = try makeURLRequest(body: requestBody)
         let (data, _) = try await session.data(for: request)
-        logger.debug("received response data: \(data.count) bytes")
+        logger.debug("received responses data: \(data.count) bytes")
 
         if let error = errorExtractor.extractError(from: data) {
-            logger.error("received error from server: \(error.localizedDescription)")
+            logger.error("received responses error: \(error.localizedDescription)")
             throw error
         }
 
-        let responseDecoder = RemoteCompletionsChatResponseDecoder(
-            decoder: responseDecoderFactory(),
-            reasoningParser: reasoningParser,
-        )
-        let response = try responseDecoder.decodeResponse(from: data)
+        let decoder = RemoteResponsesChatResponseDecoder(decoder: responseDecoderFactory())
+        let response = try decoder.decodeResponse(from: data)
         let duration = Date().timeIntervalSince(startTime)
         let contentLength = response.choices.first?.message.content?.count ?? 0
-        logger.info("completed non-streaming request in \(String(format: "%.2f", duration))s, content length: \(contentLength)")
+        logger.info("completed responses request in \(String(format: "%.2f", duration))s, content length: \(contentLength)")
         return response
     }
 
     public func streamingChatCompletionRequest(
-        body: ChatRequestBody,
+        body: ChatRequestBody
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         let requestBody = resolve(body: body, stream: true)
         let request = try makeURLRequest(body: requestBody)
         let this = self
-        logger.info("starting streaming request to model: \(this.model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
+        logger.info("starting streaming responses request to model: \(this.model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
 
-        let processor = RemoteCompletionsChatStreamProcessor(
+        let processor = RemoteResponsesChatStreamProcessor(
             eventSourceFactory: eventSourceFactory,
             chunkDecoder: chunkDecoderFactory(),
-            errorExtractor: errorExtractor,
-            reasoningParser: reasoningParser,
+            errorExtractor: errorExtractor
         )
 
         return processor.stream(request: request) { [weak self] error in
@@ -126,72 +116,73 @@ public final class RemoteCompletionsChatClient: ChatService {
         }
     }
 
-    public func chatCompletionRequest(
-        _ request: some ChatRequestConvertible,
+    public func chatCompletionsRequest(
+        _ request: some ChatRequestConvertible
     ) async throws -> ChatResponseBody {
         try await chatCompletionRequest(body: request.asChatRequestBody())
     }
 
-    public func streamingChatCompletionRequest(
-        _ request: some ChatRequestConvertible,
+    public func streamingChatCompletionsRequest(
+        _ request: some ChatRequestConvertible
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         try await streamingChatCompletionRequest(body: request.asChatRequestBody())
     }
 
-    /// Executes a chat completion using the Swift DSL for building requests.
-    ///
-    /// ```swift
-    /// let response = try await client.chatCompletion {
-    ///     ChatRequest.model("gpt-4o-mini")
-    ///     ChatRequest.messages {
-    ///         .system(content: .text("You are a helpful assistant."))
-    ///         .user(content: .text("Summarize today's meeting."))
-    ///     }
-    /// }
-    /// ```
-    public func chatCompletion(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
+    public func responses(
+        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent]
     ) async throws -> ChatResponseBody {
-        try await chatCompletionRequest(ChatRequest(builder))
+        try await chatCompletionsRequest(ChatRequest(builder))
     }
 
-    /// Streams a chat completion using the Swift request DSL.
-    public func streamingChatCompletion(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
+    public func streamingResponses(
+        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent]
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
-        try await streamingChatCompletionRequest(ChatRequest(builder))
+        try await streamingChatCompletionsRequest(ChatRequest(builder))
+    }
+
+    // Compatibility helpers mirroring the naming of other clients.
+    public func responsesRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
+        try await chatCompletionRequest(body: body)
+    }
+
+    public func streamingResponsesRequest(
+        body: ChatRequestBody
+    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
+        try await streamingChatCompletionRequest(body: body)
     }
 
     public func makeURLRequest(
         from request: some ChatRequestConvertible,
-        stream: Bool,
+        stream: Bool
     ) throws -> URLRequest {
         let body = try resolve(body: request.asChatRequestBody(), stream: stream)
         return try makeURLRequest(body: body)
     }
+}
 
-    private func makeRequestBuilder() -> RemoteCompletionsChatRequestBuilder {
-        RemoteCompletionsChatRequestBuilder(
+private extension RemoteResponsesChatClient {
+    func makeRequestBuilder() -> RemoteResponsesRequestBuilder {
+        RemoteResponsesRequestBuilder(
             baseURL: baseURL,
             path: path,
             apiKey: apiKey,
-            additionalHeaders: additionalHeaders,
+            additionalHeaders: additionalHeaders
         )
     }
 
-    private func makeURLRequest(body: ChatRequestBody) throws -> URLRequest {
+    func makeURLRequest(body: ResponsesRequestBody) throws -> URLRequest {
         let builder = makeRequestBuilder()
         return try builder.makeRequest(body: body, additionalField: additionalBodyField)
     }
 
-    private func resolve(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {
+    func resolve(body: ChatRequestBody, stream: Bool) -> ResponsesRequestBody {
         var requestBody = body.mergingAdjacentAssistantMessages()
         requestBody.model = model
         requestBody.stream = stream
-        return requestBody
+        return requestTransformer.makeRequestBody(from: requestBody, model: model, stream: stream)
     }
 
-    private func collect(error: Swift.Error) async {
+    func collect(error: Swift.Error) async {
         if let error = error as? EventSourceError {
             switch error {
             case .undefinedConnectionError:
@@ -208,6 +199,6 @@ public final class RemoteCompletionsChatClient: ChatService {
             return
         }
         await errorCollector.collect(error.localizedDescription)
-        logger.error("collected error: \(error.localizedDescription)")
+        logger.error("collected responses error: \(error.localizedDescription)")
     }
 }

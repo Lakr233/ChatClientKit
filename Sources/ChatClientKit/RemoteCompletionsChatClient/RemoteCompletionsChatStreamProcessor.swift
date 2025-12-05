@@ -8,16 +8,16 @@
 import Foundation
 import ServerEvent
 
-struct RemoteChatStreamProcessor {
+struct RemoteCompletionsChatStreamProcessor {
     private let eventSourceFactory: EventSourceProducing
     private let chunkDecoder: JSONDecoding
-    private let errorExtractor: RemoteChatErrorExtractor
+    private let errorExtractor: RemoteCompletionsChatErrorExtractor
     private let reasoningParser: ReasoningContentParser
 
     init(
         eventSourceFactory: EventSourceProducing = DefaultEventSourceFactory(),
         chunkDecoder: JSONDecoding = JSONDecoderWrapper(),
-        errorExtractor: RemoteChatErrorExtractor = RemoteChatErrorExtractor(),
+        errorExtractor: RemoteCompletionsChatErrorExtractor = RemoteCompletionsChatErrorExtractor(),
         reasoningParser: ReasoningContentParser = .init(),
     ) {
         self.eventSourceFactory = eventSourceFactory
