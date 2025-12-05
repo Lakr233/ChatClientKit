@@ -1,13 +1,13 @@
 //
-//  RemoteCompletionsChatRequestBuilder.swift
+//  RemoteResponsesChatRequestBuilder.swift
 //  ChatClientKit
 //
-//  Created by GPT-5 Codex on 2025/11/10.
+//  Created by Henri on 2025/12/2.
 //
 
 import Foundation
 
-struct RemoteCompletionsChatRequestBuilder {
+struct RemoteResponsesRequestBuilder {
     let baseURL: String?
     let path: String?
     let apiKey: String?
@@ -30,12 +30,12 @@ struct RemoteCompletionsChatRequestBuilder {
     }
 
     func makeRequest(
-        body: ChatRequestBody,
+        body: ResponsesRequestBody,
         additionalField: [String: Any],
     ) throws -> URLRequest {
         guard let baseURL else {
-            logger.error("invalid base URL")
-            throw RemoteCompletionsChatClient.Error.invalidURL
+            logger.error("invalid base URL for responses client")
+            throw RemoteResponsesChatClient.Error.invalidURL
         }
 
         var normalizedPath = path ?? ""
@@ -46,21 +46,17 @@ struct RemoteCompletionsChatRequestBuilder {
         guard var baseComponents = URLComponents(string: baseURL),
               let pathComponents = URLComponents(string: normalizedPath)
         else {
-            logger.error(
-                "failed to parse URL components from baseURL: \(baseURL), path: \(normalizedPath)",
-            )
-            throw RemoteCompletionsChatClient.Error.invalidURL
+            logger.error("failed to parse URL components from baseURL: \(baseURL), path: \(normalizedPath)")
+            throw RemoteResponsesChatClient.Error.invalidURL
         }
 
         baseComponents.path += pathComponents.path
         baseComponents.queryItems = pathComponents.queryItems
 
         guard let url = baseComponents.url else {
-            logger.error("failed to construct final URL from components")
-            throw RemoteCompletionsChatClient.Error.invalidURL
+            logger.error("failed to construct final URL from components for responses client")
+            throw RemoteResponsesChatClient.Error.invalidURL
         }
-
-        logger.debug("constructed request URL: \(url.absoluteString)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -89,6 +85,7 @@ struct RemoteCompletionsChatRequestBuilder {
             request.httpBody = try JSONSerialization.data(withJSONObject: originalDictionary, options: [])
         }
 
+        logger.debug("constructed responses request URL: \(url.absoluteString)")
         return request
     }
 }

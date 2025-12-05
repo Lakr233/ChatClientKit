@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct RemoteChatResponseDecoder {
+struct RemoteCompletionsChatResponseDecoder {
     private let decoder: JSONDecoding
     private let reasoningParser: ReasoningContentParser
 
