@@ -28,10 +28,7 @@ struct RemoteResponsesChatClientLiveTests {
         }
 
         let content = response.textValue?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) ?? ""
-        if content.isEmpty {
-            Issue.record("Expected non-empty response content")
-            return
-        }
+        #expect(!content.isEmpty, "Expected non-empty response content")
     }
 
     @Test(
@@ -59,9 +56,7 @@ struct RemoteResponsesChatClientLiveTests {
         }
 
         let normalized = collectedContent.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-        if normalized.isEmpty {
-            Issue.record("Expected streaming content to include text")
-        }
+        #expect(!normalized.isEmpty, "Expected streaming content to include text")
     }
 
     @Test(
@@ -81,9 +76,7 @@ struct RemoteResponsesChatClientLiveTests {
         }
 
         let content = response.textValue ?? ""
-        if content.isEmpty {
-            Issue.record("Expected non-empty content honoring developer instructions")
-        }
+        #expect(!content.isEmpty, "Expected non-empty content honoring developer instructions")
     }
 
     @Test(
@@ -104,9 +97,8 @@ struct RemoteResponsesChatClientLiveTests {
         }
 
         let content = response.textValue ?? ""
-        if content.isEmpty {
-            Issue.record("Response content missing for multi-turn request.")
-        } else if !content.lowercased().contains("alice") {
+        #expect(!content.isEmpty, "Response content missing for multi-turn request.")
+        if !content.lowercased().contains("alice") {
             Issue.record("Model response did not echo the provided name. Content: \(content)")
         }
     }

@@ -26,8 +26,8 @@ struct RemoteResponsesChatStreamProcessor {
     func stream(
         request: URLRequest,
         collectError: @Sendable @escaping (Swift.Error) async -> Void,
-    ) -> AnyAsyncSequence<ChatServiceStreamObject> {
-        let stream = AsyncStream<ChatServiceStreamObject> { continuation in
+    ) -> AnyAsyncSequence<ChatResponseChunk> {
+        let stream = AsyncStream<ChatResponseChunk> { continuation in
             Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, request] in
                 var toolCollector = ResponsesToolCallCollector()
                 var outputMetadata: [String: OutputItemMetadata] = [:]
@@ -85,11 +85,15 @@ struct RemoteResponsesChatStreamProcessor {
                                 finishEmitted: &finishReasonEmitted,
                             ) {
                                 chunkCount += 1
-                                totalContentLength += chunk.choices
-                                    .compactMap(\.delta.content)
-                                    .map(\.count)
-                                    .reduce(0, +)
-                                continuation.yield(.chatCompletionChunk(chunk: chunk))
+                                for choice in chunk.choices {
+                                    if let reasoning = choice.delta.reasoningContent {
+                                        continuation.yield(.reasoning(reasoning))
+                                    }
+                                    if let content = choice.delta.content {
+                                        totalContentLength += content.count
+                                        continuation.yield(.text(content))
+                                    }
+                                }
                             }
                         } catch {
                             await collectError(error)
@@ -102,17 +106,12 @@ struct RemoteResponsesChatStreamProcessor {
                 if !finishReasonEmitted {
                     let hasTools = toolCollector.hasPendingRequests
                     finishReasonEmitted = true
-                    let terminalChoice = ChatCompletionChunk.Choice(
-                        delta: .init(content: nil, reasoningContent: nil, role: "assistant"),
-                        finishReason: finishReason(for: .responseCompleted, hasToolCalls: hasTools),
-                        index: nil,
-                    )
-                    continuation.yield(.chatCompletionChunk(chunk: ChatCompletionChunk(choices: [terminalChoice])))
+                    _ = hasTools // terminal reason only; no chunk emitted
                 }
 
                 let pendingCalls = toolCollector.finalizeRequests()
                 for call in pendingCalls {
-                    continuation.yield(.tool(call: call))
+                    continuation.yield(.tool(call))
                 }
                 logger.info("responses streaming completed: received \(chunkCount) chunks, total content length: \(totalContentLength), tool calls: \(pendingCalls.count), ignored tool-like events: \(ignoredToolEvents.count)")
                 continuation.finish()

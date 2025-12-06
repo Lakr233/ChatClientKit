@@ -16,7 +16,7 @@ extension MLXChatClient {
     func streamingChatCompletionRequestExecute(
         body: ChatRequestBody,
         token: UUID,
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
         var userInput = userInput(body: body)
         let generateParameters = generateParameters(body: body)
         let container = try await loadContainer(adjusting: &userInput)
@@ -53,7 +53,14 @@ extension MLXChatClient {
                                         .compactMap(\.delta.content?.count)
                                         .reduce(0, +)
                                 }
-                                continuation.yield(ChatServiceStreamObject.chatCompletionChunk(chunk: generatedChunk))
+                                for choice in generatedChunk.choices {
+                                    if let reasoning = choice.delta.reasoningContent {
+                                        continuation.yield(ChatResponseChunk.reasoning(reasoning))
+                                    }
+                                    if let content = choice.delta.content {
+                                        continuation.yield(ChatResponseChunk.text(content))
+                                    }
+                                }
                             }
 
                             if decodeResult.shouldStop || regularContentOutputLength >= body.maxCompletionTokens ?? 4096 {
@@ -76,7 +83,14 @@ extension MLXChatClient {
                             isReasoning: isReasoning,
                             shouldRemoveLeadingWhitespace: &shouldRemoveLeadingWhitespace,
                         ) {
-                            continuation.yield(.chatCompletionChunk(chunk: finalChunk))
+                            for choice in finalChunk.choices {
+                                if let reasoning = choice.delta.reasoningContent {
+                                    continuation.yield(ChatResponseChunk.reasoning(reasoning))
+                                }
+                                if let content = choice.delta.content {
+                                    continuation.yield(ChatResponseChunk.text(content))
+                                }
+                            }
                         }
 
                         logger.info("inference completed, total output length: \(output.count), regular content: \(regularContentOutputLength)")

@@ -1,20 +1,7 @@
-//
-//  RemoteCompletionsChatClient.swift
-//  ChatClientKit
-//
-//  Created by ktiays on 2025/2/12.
-//  Refactored by GPT-5 Codex on 2025/11/10.
-//
-
 import Foundation
 import ServerEvent
 
-// public typealias RemoteChatClient = RemoteCompletionsChatClient
-
 public final class RemoteCompletionsChatClient: ChatService {
-    /// The ID of the model to use.
-    ///
-    /// The required section should be in alphabetical order.
     public let model: String
     public let baseURL: String?
     public let path: String?
@@ -26,7 +13,7 @@ public final class RemoteCompletionsChatClient: ChatService {
         case invalidData
     }
 
-    public let errorCollector = ChatServiceErrorCollector()
+    public let errorCollector = ErrorCollector.new()
 
     public let additionalHeaders: [String: String]
     public nonisolated(unsafe) let additionalBodyField: [String: Any]
@@ -82,39 +69,9 @@ public final class RemoteCompletionsChatClient: ChatService {
         requestSanitizer = dependencies.requestSanitizer
     }
 
-    public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
-        let this = self
-        logger.info("starting non-streaming request to model: \(this.model) with \(body.messages.count) messages")
-        let startTime = Date()
-
-        let requestBody = resolve(body: body, stream: false)
-        let request = try makeURLRequest(body: requestBody)
-        let (data, _) = try await session.data(for: request)
-        logger.debug("received response data: \(data.count) bytes")
-
-        if let error = errorExtractor.extractError(from: data) {
-            logger.error("received error from server: \(error.localizedDescription)")
-            throw error
-        }
-
-        let responseDecoder = RemoteCompletionsChatResponseDecoder(
-            decoder: responseDecoderFactory(),
-        )
-        let response = try responseDecoder.decodeResponse(from: data)
-        let duration = Date().timeIntervalSince(startTime)
-        let contentLength: Int = switch response {
-        case let .text(text): text.count
-        case let .reasoning(text): text.count
-        case let .image(payload): payload.data.count
-        case .tool: 0
-        }
-        logger.info("completed non-streaming request in \(String(format: "%.2f", duration))s, content length: \(contentLength)")
-        return response
-    }
-
-    public func streamingChatCompletionRequest(
+    public func streamingChat(
         body: ChatRequestBody,
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
         let requestBody = resolve(body: body, stream: true)
         let request = try makeURLRequest(body: requestBody)
         let this = self
@@ -132,40 +89,17 @@ public final class RemoteCompletionsChatClient: ChatService {
         }
     }
 
-    public func chatCompletionRequest(
-        _ request: some ChatRequestConvertible,
-    ) async throws -> ChatResponseBody {
-        try await chatCompletionRequest(body: request.asChatRequestBody())
-    }
-
     public func streamingChatCompletionRequest(
         _ request: some ChatRequestConvertible,
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
-        try await streamingChatCompletionRequest(body: request.asChatRequestBody())
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        try await streamingChat(body: request.asChatRequestBody())
     }
 
-    /// Executes a chat completion using the Swift DSL for building requests.
-    ///
-    /// ```swift
-    /// let response = try await client.chatCompletion {
-    ///     ChatRequest.model("gpt-4o-mini")
-    ///     ChatRequest.messages {
-    ///         .system(content: .text("You are a helpful assistant."))
-    ///         .user(content: .text("Summarize today's meeting."))
-    ///     }
-    /// }
-    /// ```
+    /// Executes a chat completion using the Swift request DSL.
     public func chatCompletion(
         @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
-    ) async throws -> ChatResponseBody {
-        try await chatCompletionRequest(ChatRequest(builder))
-    }
-
-    /// Streams a chat completion using the Swift request DSL.
-    public func streamingChatCompletion(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
-        try await streamingChatCompletionRequest(ChatRequest(builder))
+    ) async throws -> [ChatResponseChunk] {
+        try await chat(body: ChatRequest(builder).asChatRequestBody())
     }
 
     public func makeURLRequest(

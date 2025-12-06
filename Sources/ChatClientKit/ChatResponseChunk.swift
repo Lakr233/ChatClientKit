@@ -1,20 +1,13 @@
-//
-//  Created by ktiays on 2025/2/12.
-//  Copyright (c) 2025 ktiays. All rights reserved.
-//
-//
-
 import Foundation
 
-/// A minimal, provider-agnostic chat response for 2.0 (breaking).
-public enum ChatResponseBody: Sendable, Equatable {
+public enum ChatResponseChunk: Sendable, Equatable {
     case reasoning(String)
     case text(String)
     case image(ImageContent)
     case tool(ToolRequest)
 }
 
-public extension ChatResponseBody {
+public extension ChatResponseChunk {
     var textValue: String? {
         if case let .text(value) = self { value } else { nil }
     }

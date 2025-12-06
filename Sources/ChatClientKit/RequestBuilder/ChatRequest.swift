@@ -1,30 +1,8 @@
-//
-//  ChatRequest.swift
-//  ChatClientKit
-//
-//  Created by GPT-5 Codex on 2025/11/10.
-//
-
 import CryptoKit
 import Foundation
 
-/// Domain representation of a chat completion request.
-///
-/// The structure mirrors `ChatRequestBody` while offering additional
-/// conveniences such as result-builder initializers, normalization, and
-/// caching helpers.
-///
-/// ```swift
-/// let request = ChatRequest {
-///     ChatRequest.model("gpt-4o-mini")
-///     ChatRequest.temperature(0.4)
-///     ChatRequest.messages {
-///         .system(content: .text("You are a haiku assistant."))
-///         .user(content: .text("Write about autumn."))
-///     }
-/// }
-/// let response = try await client.chatCompletion(request)
-/// ```
+/// Domain representation of a chat completion request, mirroring `ChatRequestBody`
+/// with builder conveniences, normalization, and caching helpers.
 public struct ChatRequest: Sendable {
     public var model: String?
     public var messages: [Message]

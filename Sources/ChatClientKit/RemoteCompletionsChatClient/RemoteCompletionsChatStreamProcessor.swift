@@ -29,13 +29,13 @@ struct RemoteCompletionsChatStreamProcessor {
     func stream(
         request: URLRequest,
         collectError: @Sendable @escaping (Swift.Error) async -> Void,
-    ) -> AnyAsyncSequence<ChatServiceStreamObject> {
+    ) -> AnyAsyncSequence<ChatResponseChunk> {
         let eventSourceFactory = eventSourceFactory
         let chunkDecoder = chunkDecoder
         let errorExtractor = errorExtractor
         let reasoningParser = reasoningParser
 
-        let stream = AsyncStream<ChatServiceStreamObject> { continuation in
+        let stream = AsyncStream<ChatResponseChunk> { continuation in
             Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, reasoningParser, request] in
                 var canDecodeReasoningContent = true
                 var reducer = ReasoningStreamReducer(parser: reasoningParser)
@@ -91,7 +91,14 @@ struct RemoteCompletionsChatStreamProcessor {
                             }
 
                             chunkCount += 1
-                            continuation.yield(.chatCompletionChunk(chunk: response))
+                            for choice in response.choices {
+                                if let reasoning = choice.delta.reasoningContent {
+                                    continuation.yield(.reasoning(reasoning))
+                                }
+                                if let content = choice.delta.content {
+                                    continuation.yield(.text(content))
+                                }
+                            }
                         } catch {
                             if let text = String(data: data, encoding: .utf8) {
                                 logger.log("text content associated with this error \(text)")
@@ -108,12 +115,19 @@ struct RemoteCompletionsChatStreamProcessor {
                 }
 
                 for leftover in reducer.flushRemaining() {
-                    continuation.yield(leftover)
+                    for choice in leftover.choices {
+                        if let reasoning = choice.delta.reasoningContent {
+                            continuation.yield(.reasoning(reasoning))
+                        }
+                        if let content = choice.delta.content {
+                            continuation.yield(.text(content))
+                        }
+                    }
                 }
 
                 toolCallCollector.finalizeCurrentDeltaContent()
                 for call in toolCallCollector.pendingRequests {
-                    continuation.yield(.tool(call: call))
+                    continuation.yield(.tool(call))
                 }
                 logger.info("streaming completed: received \(chunkCount) chunks, total content length: \(totalContentLength), tool calls: \(toolCallCollector.pendingRequests.count)")
                 continuation.finish()

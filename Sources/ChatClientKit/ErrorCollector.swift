@@ -1,5 +1,5 @@
 //
-//  ChatServiceErrorCollector.swift
+//  ErrorCollector.swift
 //  ChatClientKit
 //
 //  Created by AI Assistant on 2025/11/11.
@@ -7,8 +7,8 @@
 
 import Foundation
 
-/// Thread-safe error collector for chat services.
-public actor ChatServiceErrorCollector {
+@MainActor
+public class ErrorCollector {
     var error: String?
 
     public init() {}
@@ -23,5 +23,11 @@ public actor ChatServiceErrorCollector {
 
     public func clear() {
         error = nil
+    }
+}
+
+nonisolated extension ErrorCollector {
+    static func new() -> ErrorCollector {
+        MainActor.isolated { .init() }
     }
 }

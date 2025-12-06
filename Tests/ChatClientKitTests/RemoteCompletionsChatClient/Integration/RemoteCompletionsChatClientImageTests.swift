@@ -64,7 +64,10 @@ struct RemoteCompletionsChatClientImageTests {
         let client = TestHelpers.makeOpenRouterImageClient()
 
         let request = ChatRequestBody(
-            messages: [.user(content: .text("Create a simple black and white line-art cat icon."))],
+            messages: [
+                .system(content: .text("You are a professional icon designer. You must generate an image each time.")),
+                .user(content: .text("Generate a black-and-white line-art cat icon. Keep it simple with clear outlines.")),
+            ],
             maxCompletionTokens: nil,
             stream: false,
             temperature: 0.4,
@@ -73,8 +76,9 @@ struct RemoteCompletionsChatClientImageTests {
         let response = try await client.chatCompletionRequest(body: request)
         let imageData = response.imageData
 
+        #expect(imageData != nil, "Expected image payload from google/gemini-2.5-flash-image")
         if imageData == nil {
-            Issue.record("Expected image payload in response.")
+            logger.error("imageGenerationProducesImage: missing image payload, model: \(client.model), baseURL: \(client.baseURL ?? "nil")")
         }
     }
 

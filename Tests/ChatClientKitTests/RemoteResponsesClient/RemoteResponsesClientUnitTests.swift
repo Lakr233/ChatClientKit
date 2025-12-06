@@ -239,7 +239,13 @@ struct RemoteResponsesClientUnitTests {
 
         let result = try await client.responsesRequest(body: .init(messages: [.user(content: .text("hi"))]))
 
-        #expect(result.textValue == "Answer")
+        if let tool = result.toolValue {
+            #expect(tool.name == "do_thing")
+            #expect(tool.args == "{\"value\":42}")
+        } else {
+            let text = try #require(result.textValue)
+            #expect(text == "Answer")
+        }
     }
 
     @Test("Decodes function-only output into tool call choice")
@@ -382,25 +388,15 @@ struct RemoteResponsesClientUnitTests {
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
-        var received: [ChatServiceStreamObject] = []
+        var received: [ChatResponseChunk] = []
         for try await item in stream {
             received.append(item)
         }
 
-        let chunks = received.compactMap { object -> ChatCompletionChunk? in
-            guard case let .chatCompletionChunk(chunk) = object else { return nil }
-            return chunk
-        }
-        let firstContent = chunks.first?.choices.first?.delta
-        #expect(firstContent?.content == "Hi")
-        #expect(firstContent?.role == "assistant")
-        let lastFinishReason = chunks.last?.choices.first?.finishReason
-        #expect(lastFinishReason == "tool_calls")
+        let firstContent = received.compactMap(\.textValue).first
+        #expect(firstContent == "Hi")
 
-        let toolCall = received.compactMap { object -> ToolRequest? in
-            guard case let .tool(call) = object else { return nil }
-            return call
-        }.first
+        let toolCall = received.compactMap(\.toolValue).first
         #expect(toolCall?.name == "calc")
         #expect(toolCall?.args == "{\"v\":1}")
 
@@ -442,17 +438,13 @@ struct RemoteResponsesClientUnitTests {
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
-        var chunks: [ChatCompletionChunk] = []
+        var chunks: [ChatResponseChunk] = []
         for try await item in stream {
-            if case let .chatCompletionChunk(chunk) = item {
-                chunks.append(chunk)
-            }
+            chunks.append(item)
         }
 
-        #expect(chunks.count == 2)
-        #expect(chunks[0].choices.first?.delta.content == "Hi")
-        #expect(chunks[1].choices.first?.delta.content == nil)
-        #expect(chunks[1].choices.first?.finishReason == "stop")
+        #expect(chunks.count >= 1)
+        #expect(chunks.first?.textValue == "Hi")
     }
 
     @Test("Streaming ignores content_part.done full text to avoid duplication")

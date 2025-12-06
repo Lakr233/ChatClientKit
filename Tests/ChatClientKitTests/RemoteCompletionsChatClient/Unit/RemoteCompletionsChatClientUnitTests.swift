@@ -59,7 +59,7 @@ struct RemoteCompletionsChatClientUnitTests {
             .user(content: .text("Hello")),
         ])
 
-        let result = try await client.chatCompletionRequest(body: request)
+        let result = try await client.chat(body: request)
 
         let text = try #require(result.textValue)
         #expect(text.contains("Final answer"))
@@ -207,7 +207,7 @@ struct RemoteCompletionsChatClientUnitTests {
         ])
 
         do {
-            _ = try await client.chatCompletionRequest(body: request)
+            _ = try await client.chat(body: request)
             Issue.record("Expected error to be thrown")
         } catch {
             // Expected error
@@ -254,29 +254,20 @@ struct RemoteCompletionsChatClientUnitTests {
             .user(content: .text("Hello")),
         ])
 
-        let stream = try await client.streamingChatCompletionRequest(body: request)
+        let stream = try await client.streamingChat(body: request)
 
-        var received: [ChatServiceStreamObject] = []
+        var received: [ChatResponseChunk] = []
         for try await element in stream {
             received.append(element)
         }
 
-        let reasoningDelta = received.compactMap { object -> String? in
-            guard case let .chatCompletionChunk(chunk) = object else { return nil }
-            return chunk.choices.first?.delta.reasoningContent
-        }.first
+        let reasoningDelta = received.compactMap(\.reasoningValue).first
         #expect(reasoningDelta == "internal")
 
-        let contentDelta = received.compactMap { object -> String? in
-            guard case let .chatCompletionChunk(chunk) = object else { return nil }
-            return chunk.choices.first?.delta.content
-        }.last
+        let contentDelta = received.compactMap(\.textValue).last
         #expect(contentDelta == "Visible")
 
-        let toolCall = received.compactMap { object -> ToolRequest? in
-            if case let .tool(call) = object { return call }
-            return nil
-        }.first
+        let toolCall = received.compactMap(\.toolValue).first
         #expect(toolCall?.name == "foo")
         #expect(toolCall?.args == "{\"value\":42}")
 

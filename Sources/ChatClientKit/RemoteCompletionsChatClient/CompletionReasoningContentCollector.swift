@@ -72,18 +72,18 @@ struct ReasoningStreamReducer: Sendable {
         )
     }
 
-    mutating func flushRemaining() -> [ChatServiceStreamObject] {
+    mutating func flushRemaining() -> [ChatCompletionChunk] {
         guard !contentBuffer.isEmpty else { return [] }
 
-        var emittedObjects: [ChatServiceStreamObject] = []
+        var emittedChunks: [ChatCompletionChunk] = []
 
         if isInsideReasoningContent {
-            emittedObjects.append(.chatCompletionChunk(chunk: .init(
+            emittedChunks.append(.init(
                 choices: [.init(delta: .init(reasoningContent: contentBuffer))],
-            )))
+            ))
             contentBuffer = ""
             isInsideReasoningContent = false
-            return emittedObjects
+            return emittedChunks
         }
 
         while !contentBuffer.isEmpty {
@@ -99,7 +99,7 @@ struct ReasoningStreamReducer: Sendable {
             )
 
             if !response.choices.isEmpty {
-                emittedObjects.append(.chatCompletionChunk(chunk: response))
+                emittedChunks.append(response)
                 continue
             }
 
@@ -109,19 +109,19 @@ struct ReasoningStreamReducer: Sendable {
                     .replacingOccurrences(of: parser.endToken, with: "")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 if !sanitized.isEmpty {
-                    emittedObjects.append(.chatCompletionChunk(chunk: .init(
+                    emittedChunks.append(.init(
                         choices: [.init(delta: .init(reasoningContent: sanitized))],
-                    )))
+                    ))
                 }
             } else {
-                emittedObjects.append(.chatCompletionChunk(chunk: .init(
+                emittedChunks.append(.init(
                     choices: [.init(delta: .init(content: pendingBuffer))],
-                )))
+                ))
             }
             contentBuffer = ""
         }
 
-        return emittedObjects
+        return emittedChunks
     }
 }
 

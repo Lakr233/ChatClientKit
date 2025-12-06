@@ -20,7 +20,7 @@ public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
         }
     }
 
-    public let errorCollector = ChatServiceErrorCollector()
+    public let errorCollector = ErrorCollector.new()
 
     let configuration: Configuration
 
@@ -28,37 +28,9 @@ public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
         self.configuration = configuration
     }
 
-    public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
-        let stream = try makeStreamingSequence(
-            body: body,
-            persona: configuration.persona,
-        )
-
-        var accumulatedContent = ""
-        var pendingToolCall: ToolRequest?
-
-        for try await object in stream {
-            switch object {
-            case let .chatCompletionChunk(chunk):
-                if let delta = chunk.choices.first?.delta.content {
-                    accumulatedContent += delta
-                }
-            case let .tool(call):
-                pendingToolCall = call
-            }
-        }
-
-        if let toolCall = pendingToolCall {
-            return .tool(toolCall)
-        }
-
-        let trimmed = accumulatedContent.trimmingCharacters(in: .whitespacesAndNewlines)
-        return .text(trimmed)
-    }
-
-    public func streamingChatCompletionRequest(
+    public func streamingChat(
         body: ChatRequestBody,
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
         try makeStreamingSequence(
             body: body,
             persona: configuration.streamingPersona,
@@ -149,7 +121,7 @@ public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
     func makeStreamingSequence(
         body: ChatRequestBody,
         persona: String,
-    ) throws -> AnyAsyncSequence<ChatServiceStreamObject> {
+    ) throws -> AnyAsyncSequence<ChatResponseChunk> {
         guard AppleIntelligenceModel.shared.isAvailable else {
             throw NSError(
                 domain: "AppleIntelligence",
@@ -185,17 +157,7 @@ public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
 
                         guard !newContent.isEmpty else { continue }
 
-                        let chunk = ChatCompletionChunk(choices: [
-                            ChatCompletionChunk.Choice(
-                                delta: .init(
-                                    content: newContent,
-                                    role: "assistant",
-                                    toolCalls: nil,
-                                    images: nil,
-                                ),
-                            ),
-                        ])
-                        continuation.yield(.chatCompletionChunk(chunk: chunk))
+                        continuation.yield(.text(newContent))
                     }
                     continuation.finish()
                 } catch is CancellationError {
@@ -207,7 +169,7 @@ public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
                     }
                     switch invocationError {
                     case let .invocationCaptured(request):
-                        continuation.yield(.tool(call: request))
+                        continuation.yield(.tool(request))
                         continuation.finish()
                     }
                 } catch {

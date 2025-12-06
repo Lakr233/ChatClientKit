@@ -1,10 +1,3 @@
-//
-//  RemoteResponsesChatClient.swift
-//  ChatClientKit
-//
-//  Created by Henri on 2025/12/2.
-//
-
 import Foundation
 import ServerEvent
 
@@ -20,7 +13,7 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
         case invalidData
     }
 
-    public let errorCollector = ChatServiceErrorCollector()
+    public let errorCollector = ErrorCollector.new()
 
     public let additionalHeaders: [String: String]
     public nonisolated(unsafe) let additionalBodyField: [String: Any]
@@ -76,37 +69,9 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
         requestSanitizer = dependencies.requestSanitizer
     }
 
-    public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
-        let this = self
-        logger.info("starting responses request to model: \(this.model) with \(body.messages.count) messages")
-        let startTime = Date()
-
-        let requestBody = resolve(body: body, stream: false)
-        let request = try makeURLRequest(body: requestBody)
-        let (data, _) = try await session.data(for: request)
-        logger.debug("received responses data: \(data.count) bytes")
-
-        if let error = errorExtractor.extractError(from: data) {
-            logger.error("received responses error: \(error.localizedDescription)")
-            throw error
-        }
-
-        let decoder = RemoteResponsesChatResponseDecoder(decoder: responseDecoderFactory())
-        let response = try decoder.decodeResponse(from: data)
-        let duration = Date().timeIntervalSince(startTime)
-        let contentLength: Int = switch response {
-        case let .text(text): text.count
-        case let .reasoning(text): text.count
-        case let .image(payload): payload.data.count
-        case .tool: 0
-        }
-        logger.info("completed responses request in \(String(format: "%.2f", duration))s, content length: \(contentLength)")
-        return response
-    }
-
-    public func streamingChatCompletionRequest(
+    public func streamingChat(
         body: ChatRequestBody,
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
         let requestBody = resolve(body: body, stream: true)
         let request = try makeURLRequest(body: requestBody)
         let this = self
@@ -123,39 +88,33 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
         }
     }
 
-    public func chatCompletionsRequest(
-        _ request: some ChatRequestConvertible,
-    ) async throws -> ChatResponseBody {
-        try await chatCompletionRequest(body: request.asChatRequestBody())
-    }
-
     public func streamingChatCompletionsRequest(
         _ request: some ChatRequestConvertible,
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
-        try await streamingChatCompletionRequest(body: request.asChatRequestBody())
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        try await streamingChat(body: request.asChatRequestBody())
     }
 
     public func responses(
         @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
-    ) async throws -> ChatResponseBody {
-        try await chatCompletionsRequest(ChatRequest(builder))
+    ) async throws -> [ChatResponseChunk] {
+        try await chat(body: ChatRequest(builder).asChatRequestBody())
     }
 
     public func streamingResponses(
         @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
-        try await streamingChatCompletionsRequest(ChatRequest(builder))
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        try await streamingChat(body: ChatRequest(builder).asChatRequestBody())
     }
 
     // Compatibility helpers mirroring the naming of other clients.
-    public func responsesRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
-        try await chatCompletionRequest(body: body)
+    public func responsesRequest(body: ChatRequestBody) async throws -> [ChatResponseChunk] {
+        try await chat(body: body)
     }
 
     public func streamingResponsesRequest(
         body: ChatRequestBody,
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
-        try await streamingChatCompletionRequest(body: body)
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        try await streamingChat(body: body)
     }
 
     public func makeURLRequest(

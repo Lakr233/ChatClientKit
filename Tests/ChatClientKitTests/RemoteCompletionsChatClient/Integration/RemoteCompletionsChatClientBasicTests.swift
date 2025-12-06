@@ -19,7 +19,7 @@ struct RemoteCompletionsChatClientBasicTests {
             .user(content: .text("Say 'Hello, World!' in one sentence.")),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response = try await client.chat(body: request)
 
         let text = try #require(response.textValue)
         #expect(text.isEmpty == false)
@@ -34,17 +34,15 @@ struct RemoteCompletionsChatClientBasicTests {
             .user(content: .text("Count from 1 to 5, one number per line.")),
         ])
 
-        let stream = try await client.streamingChatCompletionRequest(body: request)
+        let stream = try await client.streamingChat(body: request)
 
-        var chunks: [ChatServiceStreamObject] = []
+        var chunks: [ChatResponseChunk] = []
         var fullContent = ""
 
         for try await chunk in stream {
             chunks.append(chunk)
-            if case let .chatCompletionChunk(completionChunk) = chunk {
-                if let content = completionChunk.choices.first?.delta.content {
-                    fullContent += content
-                }
+            if let text = chunk.textValue {
+                fullContent += text
             }
         }
 
@@ -62,7 +60,7 @@ struct RemoteCompletionsChatClientBasicTests {
             .user(content: .text("Say hello")),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response = try await client.chat(body: request)
 
         let content = response.textValue ?? ""
         if content.isEmpty {
@@ -80,7 +78,7 @@ struct RemoteCompletionsChatClientBasicTests {
             .user(content: .text("What's my name?")),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response = try await client.chat(body: request)
 
         let content = response.textValue ?? ""
         if content.isEmpty {
@@ -100,7 +98,7 @@ struct RemoteCompletionsChatClientBasicTests {
             temperature: 0.5,
         )
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response = try await client.chat(body: request)
 
         let content = response.textValue ?? ""
         if content.isEmpty {
@@ -116,10 +114,10 @@ struct RemoteCompletionsChatClientBasicTests {
             messages: [
                 .user(content: .text("List the numbers 1 through 10.")),
             ],
-            maxCompletionTokens: 10,
+            maxCompletionTokens: 512, // reasoning content counts too
         )
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response = try await client.chat(body: request)
 
         let content = response.textValue ?? ""
         #expect(content.isEmpty == false)
@@ -133,7 +131,7 @@ struct RemoteCompletionsChatClientBasicTests {
             .user(content: .text("Write a short poem about testing.")),
         ])
 
-        let stream = try await client.streamingChatCompletionRequest(body: request)
+        let stream = try await client.streamingChat(body: request)
 
         var contentChunks: [String] = []
         var reasoningChunks: [String] = []

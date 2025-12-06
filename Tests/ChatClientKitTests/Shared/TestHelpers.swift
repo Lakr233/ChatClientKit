@@ -79,6 +79,10 @@ enum TestHelpers {
                 "HTTP-Referer": "https://github.com/FlowDown/ChatClientKit",
                 "X-Title": "ChatClientKit Tests",
             ],
+            additionalBodyField: [
+                "output_modalities": ["image", "text"],
+                "modalities": ["image", "text"],
+            ],
         )
     }
 
@@ -246,7 +250,7 @@ enum TestHelpers {
 
 // MARK: - ChatResponseBody helpers (tests only)
 
-extension ChatResponseBody {
+extension ChatResponseBodyChunk {
     var textValue: String? {
         if case let .text(value) = self { value } else { nil }
     }

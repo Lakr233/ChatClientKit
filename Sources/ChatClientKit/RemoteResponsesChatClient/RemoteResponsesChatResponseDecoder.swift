@@ -1,10 +1,3 @@
-//
-//  RemoteResponsesChatResponseDecoder.swift
-//  ChatClientKit
-//
-//  Created by Henri on 2025/12/2.
-//
-
 import Foundation
 
 struct RemoteResponsesChatResponseDecoder {
@@ -14,7 +7,7 @@ struct RemoteResponsesChatResponseDecoder {
         self.decoder = decoder
     }
 
-    func decodeResponse(from data: Data) throws -> ChatResponseBody {
+    func decodeResponse(from data: Data) throws -> [ChatResponseChunk] {
         let response = try decoder.decode(ResponsesAPIResponse.self, from: data)
         return response.asChatResponseBody()
     }
@@ -37,8 +30,14 @@ struct ResponsesAPIResponse: Decodable {
         case error
     }
 
-    func asChatResponseBody() -> ChatResponseBody {
+    func asChatResponseBody() -> [ChatResponseChunk] {
         let outputItems = output ?? []
+
+        for item in outputItems {
+            if let toolCall = item.asToolRequest() {
+                return [.tool(toolCall)]
+            }
+        }
 
         let reasoning = outputItems
             .compactMap { item -> String? in
@@ -51,13 +50,7 @@ struct ResponsesAPIResponse: Decodable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         if !reasoning.isEmpty {
-            return .reasoning(reasoning)
-        }
-
-        for item in outputItems {
-            if let toolCall = item.asToolRequest() {
-                return .tool(toolCall)
-            }
+            return [.reasoning(reasoning)]
         }
 
         let text = outputItems
@@ -65,7 +58,11 @@ struct ResponsesAPIResponse: Decodable {
             .joined()
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        return .text(text)
+        if !text.isEmpty {
+            return [.text(text)]
+        }
+
+        return [.text("")]
     }
 }
 

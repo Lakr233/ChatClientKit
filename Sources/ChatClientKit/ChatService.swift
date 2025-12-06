@@ -1,46 +1,34 @@
-//
-//  Created by ktiays on 2025/2/12.
-//  Copyright (c) 2025 ktiays. All rights reserved.
-//
-
 import Foundation
 
-public enum ChatServiceStreamObject: Sendable {
-    case chatCompletionChunk(chunk: ChatCompletionChunk)
-    case tool(call: ToolRequest)
-}
-
 public protocol ChatService: AnyObject, Sendable {
-    var errorCollector: ChatServiceErrorCollector { get }
+    var errorCollector: ErrorCollector { get }
 
-    /// Initiates a non-streaming chat completion request to /v1/chat/completions.
-    ///
-    /// - Parameters:
-    ///   - body: The request body to send to aiproxy and openai. See this reference:
-    ///           https://platform.openai.com/docs/api-reference/chat/create
-    /// - Returns: A ChatCompletionResponse. See this reference:
-    ///            https://platform.openai.com/docs/api-reference/chat/object
-    func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody
+    func chat(body: ChatRequestBody) async throws -> ChatResponse
+    func chat(body: ChatRequestBody) async throws -> [ChatResponseChunk]
 
-    /// Initiates a streaming chat completion request to /v1/chat/completions.
-    ///
-    /// - Parameters:
-    ///   - body: The request body to send to aiproxy and openai. See this reference:
-    ///           https://platform.openai.com/docs/api-reference/chat/create
-    /// - Returns: An async sequence of completion chunks. See this reference:
-    ///            https://platform.openai.com/docs/api-reference/chat/streaming
-    func streamingChatCompletionRequest(
-        body: ChatRequestBody,
-    ) async throws -> AnyAsyncSequence<ChatServiceStreamObject>
+    func streamingChat(body: ChatRequestBody) async throws -> AnyAsyncSequence<ChatResponseChunk>
 }
 
 public extension ChatService {
     var collectedErrors: String? {
-        get async { await errorCollector.getError() }
+        MainActor.isolated { errorCollector.getError() }
     }
 
     func setCollectedErrors(_ error: String?) async {
-        await errorCollector.collect(error)
+        await self.errorCollector.collect(error)
+    }
+
+    func chat(body: ChatRequestBody) async throws -> ChatResponse {
+        let chunks: [ChatResponseChunk] = try await chat(body: body)
+        return ChatResponse(chunks: chunks)
+    }
+    
+    func chat(body: ChatRequestBody) async throws -> [ChatResponseChunk] {
+        var chunks: [ChatResponseChunk] = []
+        for try await chunk in try await streamingChat(body: body) {
+            chunks.append(chunk)
+        }
+        return chunks
     }
 }
 

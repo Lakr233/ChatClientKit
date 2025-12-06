@@ -1,10 +1,3 @@
-//
-//  RemoteCompletionsChatResponseDecoder.swift
-//  ChatClientKit
-//
-//  Created by GPT-5 Codex on 2025/11/10.
-//
-
 import Foundation
 
 struct RemoteCompletionsChatResponseDecoder {
@@ -16,16 +9,16 @@ struct RemoteCompletionsChatResponseDecoder {
         self.decoder = decoder
     }
 
-    func decodeResponse(from data: Data) throws -> ChatResponseBody {
+    func decodeResponse(from data: Data) throws -> [ChatResponseChunk] {
         let payload = try decoder.decode(ProviderResponse.self, from: data)
         guard let choice = payload.choices?.first, let message = choice.message else {
-            return .text("")
+            return [.text("")]
         }
 
         if let toolCall = message.toolCalls?.first, let function = toolCall.function, let name = function.name {
             let args = function.arguments ?? "{}"
             let id = toolCall.id ?? UUID().uuidString
-            return .tool(ToolRequest(id: id, name: name, args: args))
+            return [.tool(ToolRequest(id: id, name: name, args: args))]
         }
 
         if let images = message.images,
@@ -33,11 +26,11 @@ struct RemoteCompletionsChatResponseDecoder {
            let urlString = first.imageURL?.url,
            let parsed = parseDataURL(urlString)
         {
-            return .image(ImageContent(data: parsed.data, mimeType: parsed.mimeType))
+            return [.image(ImageContent(data: parsed.data, mimeType: parsed.mimeType))]
         }
 
         let text = message.content ?? ""
-        return .text(text)
+        return [.text(text)]
     }
 }
 
@@ -63,11 +56,11 @@ struct Message: Decodable {
     let toolCalls: [ToolCall]?
     let images: [CompletionImageCollector]?
 
-    enum CodingKeys: String, CodingKey {
+    private enum CodingKeys: String, CodingKey {
         case content
         case role
         case toolCalls = "tool_calls"
-        case images = "image"
+        case images // Expected for providers like google/gemini-2.5-flash-image
     }
 }
 
