@@ -9,7 +9,7 @@ import Foundation
 
 /// Thread-safe error collector for chat services.
 public actor ChatServiceErrorCollector {
-    private var error: String?
+    var error: String?
 
     public init() {}
 

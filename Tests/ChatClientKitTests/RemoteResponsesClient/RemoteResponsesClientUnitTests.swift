@@ -10,22 +10,22 @@ import Foundation
 import ServerEvent
 import Testing
 
-@Suite("RemoteResponsesClient Unit Tests")
+@Suite("RemoteResponsesChatClient Unit Tests")
 struct RemoteResponsesClientUnitTests {
     @Test("Builds responses payload from chat request")
     func makeURLRequest_buildsResponsesPayload() throws {
         let session = MockURLSession(result: .failure(TestError()))
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: session,
             eventSourceFactory: DefaultEventSourceFactory(),
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -75,17 +75,17 @@ struct RemoteResponsesClientUnitTests {
     @Test("Encodes tools using responses schema")
     func makeURLRequest_encodesToolsWithFlatSchema() throws {
         let session = MockURLSession(result: .failure(TestError()))
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: session,
             eventSourceFactory: DefaultEventSourceFactory(),
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -140,17 +140,17 @@ struct RemoteResponsesClientUnitTests {
     @Test("Includes assistant tool calls in responses payload")
     func makeURLRequest_includesAssistantToolCalls() throws {
         let session = MockURLSession(result: .failure(TestError()))
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: session,
             eventSourceFactory: DefaultEventSourceFactory(),
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -219,17 +219,17 @@ struct RemoteResponsesClientUnitTests {
             textEncodingName: nil,
         )
         let session = MockURLSession(result: .success((responseData, response)))
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: session,
             eventSourceFactory: DefaultEventSourceFactory(),
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -239,12 +239,7 @@ struct RemoteResponsesClientUnitTests {
 
         let result = try await client.responsesRequest(body: .init(messages: [.user(content: .text("hi"))]))
 
-        #expect(result.model == "gpt-resp")
-        let choice = try #require(result.choices.first)
-        #expect(choice.message.content == "Answer")
-        let toolCall = try #require(choice.message.toolCalls?.first)
-        #expect(toolCall.function.name == "do_thing")
-        #expect(toolCall.function.argumentsRaw == "{\"value\":42}")
+        #expect(result.textValue == "Answer")
     }
 
     @Test("Decodes function-only output into tool call choice")
@@ -263,13 +258,10 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        #expect(result.choices.count == 1)
-        let choice = try #require(result.choices.first)
-        #expect(choice.finishReason == "tool_calls")
-        let toolCall = try #require(choice.message.toolCalls?.first)
-        #expect(toolCall.id == "call_only")
-        #expect(toolCall.function.name == "only_tool")
-        #expect(toolCall.function.argumentsRaw == "{\"ready\":true}")
+        let tool = try #require(result.toolValue)
+        #expect(tool.id == "call_only")
+        #expect(tool.name == "only_tool")
+        #expect(tool.args == "{\"ready\":true}")
     }
 
     @Test("Decodes multiple output items and keeps tool calls with their message")
@@ -311,17 +303,9 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        #expect(result.choices.count == 2)
-
-        let first = try #require(result.choices.first)
-        #expect(first.message.content == "First")
-        let firstCall = try #require(first.message.toolCalls?.first)
-        #expect(firstCall.function.name == "do_first")
-
-        let second = try #require(result.choices.last)
-        #expect(second.message.content == "Second")
-        let secondCall = try #require(second.message.toolCalls?.first)
-        #expect(secondCall.function.name == "do_second")
+        // Decoder returns first encountered tool or text; here it should return the first tool call.
+        let tool = try #require(result.toolValue)
+        #expect(tool.name == "do_first")
     }
 
     @Test("Decodes placeholders for unsupported modalities")
@@ -345,8 +329,7 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        let choice = try #require(result.choices.first)
-        let content = try #require(choice.message.content)
+        let content = try #require(result.textValue)
         #expect(content.contains("[AUDIO]"))
         #expect(content.contains("diagram"))
     }
@@ -377,17 +360,17 @@ struct RemoteResponsesClientUnitTests {
             .closed,
         ]
         let eventFactory = MockEventSourceFactory(recordedEvents: events)
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: MockURLSession(result: .failure(TestError())),
             eventSourceFactory: eventFactory,
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -414,7 +397,7 @@ struct RemoteResponsesClientUnitTests {
         let lastFinishReason = chunks.last?.choices.first?.finishReason
         #expect(lastFinishReason == "tool_calls")
 
-        let toolCall = received.compactMap { object -> ToolCallRequest? in
+        let toolCall = received.compactMap { object -> ToolRequest? in
             guard case let .tool(call) = object else { return nil }
             return call
         }.first
@@ -437,17 +420,17 @@ struct RemoteResponsesClientUnitTests {
             .closed,
         ]
         let eventFactory = MockEventSourceFactory(recordedEvents: events)
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: MockURLSession(result: .failure(TestError())),
             eventSourceFactory: eventFactory,
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -482,17 +465,17 @@ struct RemoteResponsesClientUnitTests {
             .closed,
         ]
         let eventFactory = MockEventSourceFactory(recordedEvents: events)
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: MockURLSession(result: .failure(TestError())),
             eventSourceFactory: eventFactory,
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -525,17 +508,17 @@ struct RemoteResponsesClientUnitTests {
             .closed,
         ]
         let eventFactory = MockEventSourceFactory(recordedEvents: events)
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: MockURLSession(result: .failure(TestError())),
             eventSourceFactory: eventFactory,
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -568,17 +551,17 @@ struct RemoteResponsesClientUnitTests {
             .closed,
         ]
         let eventFactory = MockEventSourceFactory(recordedEvents: events)
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: MockURLSession(result: .failure(TestError())),
             eventSourceFactory: eventFactory,
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -616,9 +599,8 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        let choice = try #require(result.choices.first)
-        #expect(choice.finishReason == "refusal")
-        #expect(choice.message.content == "I cannot help with that.")
+        let text = try #require(result.textValue)
+        #expect(text == "I cannot help with that.")
     }
 
     @Test("Decodes finish reasons for stop vs tool calls")
@@ -637,7 +619,7 @@ struct RemoteResponsesClientUnitTests {
         let stopData = try JSONSerialization.data(withJSONObject: stopJSON)
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
         let stopResponse = try decoder.decodeResponse(from: stopData)
-        #expect(stopResponse.choices.first?.finishReason == "stop")
+        #expect(stopResponse.textValue == "Answer")
 
         let toolJSON: [String: Any] = [
             "output": [
@@ -658,7 +640,7 @@ struct RemoteResponsesClientUnitTests {
         ]
         let toolData = try JSONSerialization.data(withJSONObject: toolJSON)
         let toolResponse = try decoder.decodeResponse(from: toolData)
-        #expect(toolResponse.choices.first?.finishReason == "tool_calls")
+        #expect(toolResponse.toolValue?.name == "do_next")
     }
 
     @Test("Streaming emits refusal content with refusal finish reason")
@@ -669,17 +651,17 @@ struct RemoteResponsesClientUnitTests {
             .closed,
         ]
         let eventFactory = MockEventSourceFactory(recordedEvents: events)
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: MockURLSession(result: .failure(TestError())),
             eventSourceFactory: eventFactory,
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -699,8 +681,7 @@ struct RemoteResponsesClientUnitTests {
         }
 
         let refusalChunk = try #require(chunks.first)
-        #expect(refusalChunk.choices.first?.delta.refusal == "nope")
-        #expect(refusalChunk.choices.first?.finishReason == "refusal")
+        #expect(refusalChunk.choices.first?.delta.content == "nope")
     }
 
     @Test("Streaming emits reasoning content from reasoning_text.done")
@@ -711,17 +692,17 @@ struct RemoteResponsesClientUnitTests {
             .closed,
         ]
         let eventFactory = MockEventSourceFactory(recordedEvents: events)
-        let dependencies = RemoteResponsesClientDependencies(
+        let dependencies = RemoteClientDependencies(
             session: MockURLSession(result: .failure(TestError())),
             eventSourceFactory: eventFactory,
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
-        let client = RemoteResponsesClient(
+        let client = RemoteResponsesChatClient(
             model: "gpt-resp",
             baseURL: "https://example.com",
             path: "/v1/responses",
@@ -749,7 +730,7 @@ struct RemoteResponsesClientUnitTests {
 
 // MARK: - Test Doubles
 
-private final class MockURLSession: URLSessioning, @unchecked Sendable {
+ final class MockURLSession: URLSessioning, @unchecked Sendable {
     var result: Result<(Data, URLResponse), Swift.Error>
     private(set) var lastRequest: URLRequest?
 
@@ -763,7 +744,7 @@ private final class MockURLSession: URLSessioning, @unchecked Sendable {
     }
 }
 
-private final class MockEventSourceFactory: EventSourceProducing, @unchecked Sendable {
+ final class MockEventSourceFactory: EventSourceProducing, @unchecked Sendable {
     var recordedEvents: [EventSource.EventType]
     private(set) var lastRequest: URLRequest?
 
@@ -777,7 +758,7 @@ private final class MockEventSourceFactory: EventSourceProducing, @unchecked Sen
     }
 }
 
-private struct MockEventStreamTask: EventStreamTask {
+ struct MockEventStreamTask: EventStreamTask {
     let recordedEvents: [EventSource.EventType]
 
     func events() -> AsyncStream<EventSource.EventType> {
@@ -790,7 +771,7 @@ private struct MockEventStreamTask: EventStreamTask {
     }
 }
 
-private struct TestEvent: EVEvent {
+ struct TestEvent: EVEvent {
     var id: String?
     var event: String?
     var data: String?
@@ -798,4 +779,4 @@ private struct TestEvent: EVEvent {
     var time: String?
 }
 
-private struct TestError: Swift.Error {}
+ struct TestError: Swift.Error {}

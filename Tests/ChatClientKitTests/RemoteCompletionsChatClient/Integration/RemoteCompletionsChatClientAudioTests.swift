@@ -26,8 +26,7 @@ struct RemoteCompletionsChatClientAudioTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         #expect(content.isEmpty == false)
     }
 
@@ -73,8 +72,7 @@ struct RemoteCompletionsChatClientAudioTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         #expect(content.isEmpty == false)
     }
 
@@ -95,8 +93,7 @@ struct RemoteCompletionsChatClientAudioTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         #expect(content.isEmpty == false)
     }
 

@@ -1,5 +1,5 @@
 //
-//  ReasoningContentParser.swift
+//  CompletionReasoningContentCollector.swift
 //  ChatClientKit
 //
 //  Created by GPT-5 Codex on 2025/11/10.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct ReasoningContentParser: Sendable {
+struct CompletionReasoningContentCollector: Sendable {
     let startToken: String
     let endToken: String
 
@@ -16,15 +16,15 @@ struct ReasoningContentParser: Sendable {
         self.endToken = endToken
     }
 
-    func extractingReasoningContent(from choice: ChoiceMessage) -> ChoiceMessage {
-        guard choice.reasoning?.isEmpty != false,
-              choice.reasoningContent?.isEmpty != false,
-              let content = choice.content,
+    func extractingReasoningContent(
+        from delta: ChatCompletionChunk.Choice.Delta,
+    ) -> ChatCompletionChunk.Choice.Delta {
+        guard delta.reasoning?.isEmpty != false,
+              delta.reasoningContent?.isEmpty != false,
+              let content = delta.content,
               let startRange = content.range(of: startToken),
               let endRange = content.range(of: endToken, range: startRange.upperBound ..< content.endIndex)
-        else {
-            return choice
-        }
+        else { return delta }
 
         let reasoningRange = startRange.upperBound ..< endRange.lowerBound
         let leading = content[..<startRange.lowerBound]
@@ -37,19 +37,23 @@ struct ReasoningContentParser: Sendable {
                 .trimmingCharacters(in: .whitespacesAndNewlines),
         )
 
-        var newChoice = choice
-        newChoice.content = remainingContent
-        newChoice.reasoningContent = reasoningContent
-        return newChoice
+        return ChatCompletionChunk.Choice.Delta(
+            content: remainingContent,
+            reasoning: delta.reasoning,
+            reasoningContent: reasoningContent,
+            role: delta.role,
+            toolCalls: delta.toolCalls,
+            images: delta.images,
+        )
     }
 }
 
 struct ReasoningStreamReducer: Sendable {
-    private let parser: ReasoningContentParser
-    private var isInsideReasoningContent = false
-    private var contentBuffer = ""
+    let parser: CompletionReasoningContentCollector
+    var isInsideReasoningContent = false
+    var contentBuffer = ""
 
-    init(parser: ReasoningContentParser) {
+    init(parser: CompletionReasoningContentCollector) {
         self.parser = parser
     }
 
@@ -121,8 +125,8 @@ struct ReasoningStreamReducer: Sendable {
     }
 }
 
-private func reduceReasoningContent(
-    parser: ReasoningContentParser,
+func reduceReasoningContent(
+    parser: CompletionReasoningContentCollector,
     content: [String],
     reasoningContent: [String],
     isInsideReasoning: inout Bool,
@@ -218,16 +222,16 @@ private func reduceReasoningContent(
                 content: mergedContent,
                 reasoning: firstChoice.delta.reasoning,
                 reasoningContent: firstChoice.delta.reasoningContent,
-                refusal: firstChoice.delta.refusal,
                 role: firstChoice.delta.role,
                 toolCalls: firstChoice.delta.toolCalls,
+                images: firstChoice.delta.images,
             )
             updatedChoices[0] = .init(
                 delta: updatedDelta,
                 finishReason: firstChoice.finishReason,
                 index: firstChoice.index,
             )
-            response.choices = updatedChoices
+            response = .init(choices: updatedChoices)
         }
     }
 }

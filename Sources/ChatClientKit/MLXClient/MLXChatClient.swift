@@ -7,7 +7,7 @@ import CoreImage
 import Foundation
 @preconcurrency import MLXLMCommon
 
-public final class MLXChatClient: ChatService {
+public class MLXChatClient: ChatService, @unchecked Sendable {
     let modelConfiguration: ModelConfiguration
     let emptyImage: CIImage = MLXImageUtilities.placeholderImage(
         size: .init(width: 64, height: 64),
@@ -34,33 +34,24 @@ public final class MLXChatClient: ChatService {
         logger.info("starting non-streaming chat completion request with \(body.messages.count) messages")
         let startTime = Date()
         let resolvedBody = resolve(body: body, stream: false)
-        let choiceMessage: ChoiceMessage = try await streamingChatCompletionRequest(body: resolvedBody)
+        let aggregated: String = try await streamingChatCompletionRequest(body: resolvedBody)
             .compactMap { chunk -> ChatCompletionChunk? in
-                switch chunk {
-                case let .chatCompletionChunk(chunk): return chunk
-                default: return nil // TODO: tool call
-                }
+                if case let .chatCompletionChunk(chunk) = chunk { return chunk }
+                return nil
             }
-            .compactMap { $0.choices.first?.delta }
-            .reduce(into: .init(content: "", reasoningContent: "", role: "")) { partialResult, delta in
-                if let content = delta.content { partialResult.content?.append(content) }
-                if let reasoningContent = delta.reasoningContent {
-                    partialResult.reasoningContent?.append(reasoningContent)
-                }
+            .compactMap { $0.choices.first?.delta.content }
+            .reduce(into: "") { partial, segment in
+                var updated = partial + segment
                 for terminator in ChatClientConstants.additionalTerminatingTokens {
-                    while partialResult.content?.hasSuffix(terminator) == true {
-                        partialResult.content?.removeLast(terminator.count)
+                    while updated.hasSuffix(terminator) {
+                        updated.removeLast(terminator.count)
                     }
                 }
+                partial = updated
             }
-        let timestamp = Int(Date.now.timeIntervalSince1970)
         let duration = Date().timeIntervalSince(startTime)
-        logger.info("completed non-streaming request in \(String(format: "%.2f", duration))s, content length: \(choiceMessage.content?.count ?? 0)")
-        return .init(
-            choices: [.init(message: choiceMessage)],
-            created: timestamp,
-            model: modelConfiguration.name,
-        )
+        logger.info("completed non-streaming request in \(String(format: "%.2f", duration))s, content length: \(aggregated.count)")
+        return .text(aggregated)
     }
 
     public func streamingChatCompletionRequest(

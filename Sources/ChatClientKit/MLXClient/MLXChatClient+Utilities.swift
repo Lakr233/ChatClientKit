@@ -13,7 +13,7 @@ import MLXVLM
 extension MLXChatClient {
     func resolve(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {
         var body = body.mergingAdjacentAssistantMessages()
-        body = ChatRequestSanitizer().sanitize(body)
+        body = RequestSanitizer().sanitize(body)
         body.stream = stream
         return body
     }
@@ -110,7 +110,7 @@ extension MLXChatClient {
         }
     }
 
-    private func userInputContent(for messageContent: ChatRequestBody.Message.MessageContent<String, [String]>) -> String {
+    func userInputContent(for messageContent: ChatRequestBody.Message.MessageContent<String, [String]>) -> String {
         switch messageContent {
         case let .text(text):
             text

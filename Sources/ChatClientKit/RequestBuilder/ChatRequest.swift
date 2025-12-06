@@ -26,11 +26,6 @@ import Foundation
 /// let response = try await client.chatCompletion(request)
 /// ```
 public struct ChatRequest: Sendable {
-    public typealias Message = ChatRequestBody.Message
-    public typealias MessageContent = ChatRequestBody.Message.MessageContent
-    public typealias ContentPart = ChatRequestBody.Message.ContentPart
-    public typealias Tool = ChatRequestBody.Tool
-
     public var model: String?
     public var messages: [Message]
     public var maxCompletionTokens: Int?
@@ -280,7 +275,7 @@ extension ChatRequest {
     }
 }
 
-private struct PendingAssistant {
+struct PendingAssistant {
     var content: ChatRequest.Message.MessageContent<String, [String]>?
     var toolCalls: [ChatRequest.Message.ToolCall]?
     var reasoning: String?

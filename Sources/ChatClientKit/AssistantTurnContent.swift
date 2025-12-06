@@ -12,31 +12,22 @@ import Foundation
 public struct AssistantTurnContent: Sendable, Equatable {
     public var content: String
     public var reasoning: String
-    public var toolCalls: [ToolCall]
+    public var toolCalls: [ToolRequest]
     public var refusal: String?
+    public var images: [ImageContent]
 
     public init(
         content: String = "",
         reasoning: String = "",
-        toolCalls: [ToolCall] = [],
+        toolCalls: [ToolRequest] = [],
         refusal: String? = nil,
+        images: [ImageContent] = [],
     ) {
         self.content = content
         self.reasoning = reasoning
         self.toolCalls = toolCalls
         self.refusal = refusal
-    }
-}
-
-public extension ChoiceMessage {
-    /// A merged assistant representation that preserves reasoning details.
-    var assistantTurn: AssistantTurnContent {
-        AssistantTurnContent(
-            content: content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
-            reasoning: (reasoningContent ?? reasoning ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-            toolCalls: toolCalls ?? [],
-            refusal: nil,
-        )
+        self.images = images
     }
 }
 
@@ -44,11 +35,11 @@ public extension ChatCompletionChunk.Choice.Delta {
     /// A merged assistant representation for streaming deltas.
     var assistantTurn: AssistantTurnContent {
         let content = content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let reasoning = (reasoningContent ?? reasoning ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         return AssistantTurnContent(
             content: content,
-            reasoning: reasoning,
+            reasoning: "",
             toolCalls: AssistantTurnContent.normalizeToolCalls(from: toolCalls),
+            images: AssistantTurnContent.normalizeImages(from: images),
         )
     }
 }
@@ -56,9 +47,9 @@ public extension ChatCompletionChunk.Choice.Delta {
 public extension AssistantTurnContent {
     static func normalizeToolCalls(
         from deltaCalls: [ChatCompletionChunk.Choice.Delta.ToolCall]?,
-    ) -> [ToolCall] {
+    ) -> [ToolRequest] {
         guard let deltaCalls else { return [] }
-        var result: [ToolCall] = []
+        var result: [ToolRequest] = []
         for call in deltaCalls {
             guard
                 let id = call.id,
@@ -67,18 +58,25 @@ public extension AssistantTurnContent {
                 let arguments = function.arguments
             else { continue }
 
-            result.append(ToolCall(id: id, functionName: name, argumentsJSON: arguments))
+            result.append(ToolRequest(id: id, name: name, args: arguments))
         }
         return result
     }
-}
 
-private extension ToolCallRequest {
-    init?(from delta: ChatCompletionChunk.Choice.Delta.ToolCall) {
-        guard
-            let name = delta.function?.name,
-            let args = delta.function?.arguments
-        else { return nil }
-        self.init(name: name, args: args)
+    static func normalizeImages(from items: [CompletionImageCollector]?) -> [ImageContent] {
+        guard let items else { return [] }
+        return items.compactMap { dto in
+            guard let urlString = dto.imageURL?.url else { return nil }
+            guard urlString.lowercased().hasPrefix("data:"),
+                  let commaIndex = urlString.firstIndex(of: ",")
+            else { return nil }
+            let header = String(urlString[..<commaIndex])
+            let body = String(urlString[urlString.index(after: commaIndex)...])
+            let mime = header
+                .replacingOccurrences(of: "data:", with: "")
+                .replacingOccurrences(of: ";base64", with: "")
+            guard let data = Data(base64Encoded: body) else { return nil }
+            return ImageContent(data: data, mimeType: mime.isEmpty ? nil : mime)
+        }
     }
 }

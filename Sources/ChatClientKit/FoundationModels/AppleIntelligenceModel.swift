@@ -13,7 +13,7 @@ public final class AppleIntelligenceModel: Sendable {
 
     public static let frameworkUnavailableReason = "frameworkUnavailable"
 
-    private init() {}
+    init() {}
 
     public var availabilityState: AppleIntelligenceAvailabilityState {
         let availability = SystemLanguageModel.default.availability

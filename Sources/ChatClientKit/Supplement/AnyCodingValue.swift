@@ -65,7 +65,7 @@ public extension [String: AnyCodingValue] {
     }
 }
 
-private func convertToUntyped(_ input: AnyCodingValue) -> Any {
+func convertToUntyped(_ input: AnyCodingValue) -> Any {
     switch input {
     case .null:
         NSNull()
@@ -84,7 +84,7 @@ private func convertToUntyped(_ input: AnyCodingValue) -> Any {
     }
 }
 
-private func convertToUntypedDictionary(
+func convertToUntypedDictionary(
     _ input: [String: AnyCodingValue],
 ) -> [String: Any] {
     input.mapValues { v in

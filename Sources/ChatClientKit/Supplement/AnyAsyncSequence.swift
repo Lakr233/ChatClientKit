@@ -7,10 +7,10 @@ import Foundation
 
 /// An `AsyncSequence` that performs type erasure by wrapping another.
 public struct AnyAsyncSequence<Element>: AsyncSequence {
-    private let source: () -> AnyAsyncIterator
+    let source: () -> AnyAsyncIterator
 
     public struct AnyAsyncIterator: AsyncIteratorProtocol {
-        private let nextSource: () async throws -> Element?
+        let nextSource: () async throws -> Element?
 
         public init<I>(_ iterator: I) where I: AsyncIteratorProtocol, I.Element == Element {
             var iter = iterator

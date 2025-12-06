@@ -1,0 +1,129 @@
+//
+//  MessageSanitizer.swift
+//  ChatClientKit
+//
+//  Created by GPT-5 Codex on 2025/12/6.
+//
+
+import Foundation
+
+enum MessageSanitizer {
+    static func ensureAssistantHasUserContext(messages: inout [ChatRequestBody.Message]) {
+        var sanitized: [ChatRequestBody.Message] = []
+        sanitized.reserveCapacity(messages.count + 2)
+
+        for message in messages {
+            guard case .assistant = message else {
+                sanitized.append(message)
+                continue
+            }
+
+            let needsLeadingUser: Bool = if let last = sanitized.last {
+                !last.isUser
+            } else {
+                true
+            }
+
+            if needsLeadingUser {
+                sanitized.append(.user(content: .text("")))
+            }
+
+            sanitized.append(message)
+        }
+
+        messages = sanitized
+    }
+
+    static func ensureToolResponses(messages: inout [ChatRequestBody.Message]) {
+        let existingToolResponseIDs: Set<String> = Set(
+            messages.compactMap { message in
+                if case let .tool(_, toolCallID) = message {
+                    toolCallID
+                } else {
+                    nil
+                }
+            },
+        )
+
+        var sanitized: [ChatRequestBody.Message] = []
+        sanitized.reserveCapacity(messages.count + 2)
+        var insertedPlaceholderIDs: Set<String> = []
+
+        for message in messages {
+            sanitized.append(message)
+
+            guard case let .assistant(_, toolCalls, _) = message,
+                  let toolCalls,
+                  !toolCalls.isEmpty
+            else {
+                continue
+            }
+
+            for toolCall in toolCalls {
+                guard !existingToolResponseIDs.contains(toolCall.id) else { continue }
+                guard insertedPlaceholderIDs.insert(toolCall.id).inserted else { continue }
+                sanitized.append(.tool(content: .text(""), toolCallID: toolCall.id))
+            }
+        }
+
+        messages = sanitized
+    }
+
+    static func ensureTrailingUserText(messages: inout [ChatRequestBody.Message]) {
+        guard !messages.lastIsUserText else { return }
+        messages.append(.user(content: .text("")))
+    }
+
+    static func mergeSystemMessages(_ messages: [ChatRequestBody.Message]) -> [ChatRequestBody.Message] {
+        var systemSegments: [String] = []
+        var systemName: String?
+        var hasSystemMessage = false
+        var nonSystemMessages: [ChatRequestBody.Message] = []
+
+        for message in messages {
+            switch message {
+            case let .system(content, name):
+                hasSystemMessage = true
+                let segment = flattenSystemContent(content)
+                if !segment.isEmpty {
+                    systemSegments.append(segment)
+                }
+                if systemName == nil {
+                    systemName = name
+                }
+            default:
+                nonSystemMessages.append(message)
+            }
+        }
+
+        guard hasSystemMessage else { return messages }
+
+        let combined = systemSegments
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
+
+        if combined.isEmpty {
+            return nonSystemMessages
+        }
+
+        let normalizedContent: ChatRequestBody.Message.MessageContent<String, [String]> = .text(combined)
+
+        var merged: [ChatRequestBody.Message] = [
+            .system(content: normalizedContent, name: systemName),
+        ]
+        merged.append(contentsOf: nonSystemMessages)
+        return merged
+    }
+
+    static func flattenSystemContent(
+        _ content: ChatRequestBody.Message.MessageContent<String, [String]>,
+    ) -> String {
+        switch content {
+        case let .text(text):
+            text
+        case let .parts(parts):
+            parts.joined(separator: "\n")
+        }
+    }
+}

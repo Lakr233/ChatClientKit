@@ -8,7 +8,7 @@
 import Foundation
 import ServerEvent
 
-public final class RemoteResponsesChatClient: ChatService {
+public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
     public let model: String
     public let baseURL: String?
     public let path: String?
@@ -25,13 +25,13 @@ public final class RemoteResponsesChatClient: ChatService {
     public let additionalHeaders: [String: String]
     public nonisolated(unsafe) let additionalBodyField: [String: Any]
 
-    private let session: URLSessioning
-    private let eventSourceFactory: EventSourceProducing
-    private let responseDecoderFactory: @Sendable () -> JSONDecoding
-    private let chunkDecoderFactory: @Sendable () -> JSONDecoding
-    private let errorExtractor: RemoteResponsesChatErrorExtractor
-    private let requestTransformer: ResponsesRequestTransformer
-    private let requestSanitizer: ChatRequestSanitizing
+    let session: URLSessioning
+    let eventSourceFactory: EventSourceProducing
+    let responseDecoderFactory: @Sendable () -> JSONDecoding
+    let chunkDecoderFactory: @Sendable () -> JSONDecoding
+    let errorExtractor: RemoteResponsesChatErrorExtractor
+    let requestTransformer: ResponsesRequestTransformer
+    let requestSanitizer: RequestSanitizing
 
     public convenience init(
         model: String,
@@ -59,7 +59,7 @@ public final class RemoteResponsesChatClient: ChatService {
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
         additionalBodyField: [String: Any] = [:],
-        dependencies: RemoteResponsesClientDependencies,
+        dependencies: RemoteClientDependencies,
     ) {
         self.model = model
         self.baseURL = baseURL
@@ -94,7 +94,12 @@ public final class RemoteResponsesChatClient: ChatService {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: responseDecoderFactory())
         let response = try decoder.decodeResponse(from: data)
         let duration = Date().timeIntervalSince(startTime)
-        let contentLength = response.choices.first?.message.content?.count ?? 0
+        let contentLength: Int = switch response {
+        case let .text(text): text.count
+        case let .reasoning(text): text.count
+        case let .image(payload): payload.data.count
+        case .tool: 0
+        }
         logger.info("completed responses request in \(String(format: "%.2f", duration))s, content length: \(contentLength)")
         return response
     }
@@ -162,7 +167,7 @@ public final class RemoteResponsesChatClient: ChatService {
     }
 }
 
-private extension RemoteResponsesChatClient {
+extension RemoteResponsesChatClient {
     func makeRequestBuilder() -> RemoteResponsesRequestBuilder {
         RemoteResponsesRequestBuilder(
             baseURL: baseURL,

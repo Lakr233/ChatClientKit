@@ -26,8 +26,7 @@ struct RemoteCompletionsChatClientImageTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         #expect(content.isEmpty == false)
         // The image is red, so the response should mention red
         #expect(content.lowercased().contains("red") == true)
@@ -60,6 +59,23 @@ struct RemoteCompletionsChatClientImageTests {
         #expect(fullContent.isEmpty == false)
     }
 
+    @Test("Image generation returns image payload", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func imageGenerationProducesImage() async throws {
+        let client = TestHelpers.makeOpenRouterImageClient()
+
+        let request = ChatRequestBody(
+            messages: [.user(content: .text("Create a simple black and white line-art cat icon."))],
+            maxCompletionTokens: nil,
+            stream: false,
+            temperature: 0.4
+        )
+
+        let response = try await client.chatCompletionRequest(body: request)
+        let imageData = response.imageData
+
+        #expect(imageData != nil)
+    }
+
     @Test("Chat completion with image and text", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
     func chatCompletionWithImageAndText() async throws {
         let client = TestHelpers.makeOpenRouterClient()
@@ -75,8 +91,7 @@ struct RemoteCompletionsChatClientImageTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         #expect(content.isEmpty == false)
     }
 
@@ -97,8 +112,7 @@ struct RemoteCompletionsChatClientImageTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         #expect(content.isEmpty == false)
     }
 
@@ -117,8 +131,7 @@ struct RemoteCompletionsChatClientImageTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         #expect(content.isEmpty == false)
     }
 

@@ -31,13 +31,13 @@ public final class RemoteCompletionsChatClient: ChatService {
     public let additionalHeaders: [String: String]
     public nonisolated(unsafe) let additionalBodyField: [String: Any]
 
-    private let session: URLSessioning
-    private let eventSourceFactory: EventSourceProducing
-    private let responseDecoderFactory: @Sendable () -> JSONDecoding
-    private let chunkDecoderFactory: @Sendable () -> JSONDecoding
-    private let errorExtractor: RemoteCompletionsChatErrorExtractor
-    private let reasoningParser: ReasoningContentParser
-    private let requestSanitizer: ChatRequestSanitizing
+    let session: URLSessioning
+    let eventSourceFactory: EventSourceProducing
+    let responseDecoderFactory: @Sendable () -> JSONDecoding
+    let chunkDecoderFactory: @Sendable () -> JSONDecoding
+    let errorExtractor: RemoteCompletionsChatErrorExtractor
+    let reasoningParser: CompletionReasoningContentCollector
+    let requestSanitizer: RequestSanitizing
 
     public convenience init(
         model: String,
@@ -65,7 +65,7 @@ public final class RemoteCompletionsChatClient: ChatService {
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
         additionalBodyField: [String: Any] = [:],
-        dependencies: RemoteCompletionsChatClientDependencies,
+        dependencies: RemoteClientDependencies,
     ) {
         self.model = model
         self.baseURL = baseURL
@@ -99,11 +99,15 @@ public final class RemoteCompletionsChatClient: ChatService {
 
         let responseDecoder = RemoteCompletionsChatResponseDecoder(
             decoder: responseDecoderFactory(),
-            reasoningParser: reasoningParser,
         )
         let response = try responseDecoder.decodeResponse(from: data)
         let duration = Date().timeIntervalSince(startTime)
-        let contentLength = response.choices.first?.message.content?.count ?? 0
+        let contentLength: Int = switch response {
+        case let .text(text): text.count
+        case let .reasoning(text): text.count
+        case let .image(payload): payload.data.count
+        case .tool: 0
+        }
         logger.info("completed non-streaming request in \(String(format: "%.2f", duration))s, content length: \(contentLength)")
         return response
     }
@@ -172,7 +176,7 @@ public final class RemoteCompletionsChatClient: ChatService {
         return try makeURLRequest(body: body)
     }
 
-    private func makeRequestBuilder() -> RemoteCompletionsChatRequestBuilder {
+    func makeRequestBuilder() -> RemoteCompletionsChatRequestBuilder {
         RemoteCompletionsChatRequestBuilder(
             baseURL: baseURL,
             path: path,
@@ -181,19 +185,19 @@ public final class RemoteCompletionsChatClient: ChatService {
         )
     }
 
-    private func makeURLRequest(body: ChatRequestBody) throws -> URLRequest {
+    func makeURLRequest(body: ChatRequestBody) throws -> URLRequest {
         let builder = makeRequestBuilder()
         return try builder.makeRequest(body: body, additionalField: additionalBodyField)
     }
 
-    private func resolve(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {
+    func resolve(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {
         var requestBody = body.mergingAdjacentAssistantMessages()
         requestBody.model = model
         requestBody.stream = stream
         return requestSanitizer.sanitize(requestBody)
     }
 
-    private func collect(error: Swift.Error) async {
+    func collect(error: Swift.Error) async {
         if let error = error as? EventSourceError {
             switch error {
             case .undefinedConnectionError:

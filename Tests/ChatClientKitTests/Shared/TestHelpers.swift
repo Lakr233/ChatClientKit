@@ -50,12 +50,28 @@ enum TestHelpers {
         return value
     }
 
-    /// Creates a RemoteCompletionsChatClient configured for OpenRouter with google/gemini-2.5-pro
+    /// Creates a RemoteCompletionsChatClient configured for OpenRouter with google/gemini-3-pro-preview
     /// Precondition: API key must be configured (check with isOpenRouterAPIKeyConfigured before using)
     static func makeOpenRouterClient() -> RemoteCompletionsChatClient {
         let apiKey = requireAPIKey()
         return RemoteCompletionsChatClient(
             model: "google/gemini-3-pro-preview",
+            baseURL: "https://openrouter.ai/api",
+            path: "/v1/chat/completions",
+            apiKey: apiKey,
+            additionalHeaders: [
+                "HTTP-Referer": "https://github.com/FlowDown/ChatClientKit",
+                "X-Title": "ChatClientKit Tests",
+            ],
+        )
+    }
+
+    /// Creates a RemoteCompletionsChatClient configured for OpenRouter image generation.
+    /// Uses `google/gemini-2.5-flash-image` which supports image output.
+    static func makeOpenRouterImageClient() -> RemoteCompletionsChatClient {
+        let apiKey = requireAPIKey()
+        return RemoteCompletionsChatClient(
+            model: "google/gemini-2.5-flash-image",
             baseURL: "https://openrouter.ai/api",
             path: "/v1/chat/completions",
             apiKey: apiKey,
@@ -93,7 +109,7 @@ enum TestHelpers {
         return url
     }
 
-    private static func loadAPIKey(named name: String) -> String? {
+     static func loadAPIKey(named name: String) -> String? {
         if let value = ProcessInfo.processInfo.environment[name], !value.isEmpty {
             return value
         }
@@ -225,5 +241,21 @@ enum TestHelpers {
             return false
         }
         return true
+    }
+}
+
+// MARK: - ChatResponseBody helpers (tests only)
+
+extension ChatResponseBody {
+    var textValue: String? {
+        if case let .text(value) = self { value } else { nil }
+    }
+
+    var imageData: Data? {
+        if case let .image(content) = self { content.data } else { nil }
+    }
+
+    var toolCall: ToolRequest? {
+        if case let .tool(call) = self { call } else { nil }
     }
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 struct RemoteResponsesChatResponseDecoder {
-    private let decoder: JSONDecoding
+    let decoder: JSONDecoding
 
     init(decoder: JSONDecoding = JSONDecoderWrapper()) {
         self.decoder = decoder
@@ -28,7 +28,7 @@ struct ResponsesAPIResponse: Decodable {
     let status: String?
     let error: ResponsesErrorPayload?
 
-    private enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey {
         case id
         case createdAt = "created_at"
         case model
@@ -39,46 +39,33 @@ struct ResponsesAPIResponse: Decodable {
 
     func asChatResponseBody() -> ChatResponseBody {
         let outputItems = output ?? []
-        var choices: [ChatChoice] = []
-        var pendingToolCalls: [ToolCall] = []
+
+        let reasoning = outputItems
+            .compactMap { item -> String? in
+                guard let parts = item.content else { return nil }
+                let reasoningSegments = parts.compactMap(\.reasoningTextContent)
+                guard !reasoningSegments.isEmpty else { return nil }
+                return reasoningSegments.joined()
+            }
+            .joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !reasoning.isEmpty {
+            return .reasoning(reasoning)
+        }
 
         for item in outputItems {
-            if let toolCall = item.asToolCall() {
-                if let lastIndex = choices.indices.last {
-                    choices[lastIndex] = choices[lastIndex].appending(toolCalls: [toolCall])
-                } else {
-                    pendingToolCalls.append(toolCall)
-                }
-                continue
-            }
-
-            guard var choice = item.asChoice(toolCalls: []) else { continue }
-
-            if !pendingToolCalls.isEmpty {
-                choice = choice.appending(toolCalls: pendingToolCalls)
-                pendingToolCalls.removeAll()
-            }
-
-            choices.append(choice)
-        }
-
-        if !pendingToolCalls.isEmpty {
-            let message = ChoiceMessage(content: nil, role: "assistant", toolCalls: pendingToolCalls)
-            choices.append(ChatChoice(finishReason: "tool_calls", message: message))
-        }
-
-        if status?.lowercased() == "incomplete", let lastIndex = choices.indices.last {
-            var lastChoice = choices[lastIndex]
-            if lastChoice.finishReason == "stop" || lastChoice.finishReason == nil {
-                lastChoice.finishReason = "length"
-                choices[lastIndex] = lastChoice
+            if let toolCall = item.asToolRequest() {
+                return .tool(toolCall)
             }
         }
 
-        let createdValue = Int(createdAt ?? Date().timeIntervalSince1970)
-        let modelName = model ?? ""
+        let text = outputItems
+            .compactMap(\.textContent)
+            .joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        return ChatResponseBody(choices: choices, created: createdValue, model: modelName)
+        return .text(text)
     }
 }
 
@@ -91,7 +78,7 @@ struct ResponsesOutputItem: Decodable {
     let callId: String?
     let arguments: String?
 
-    private enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey {
         case id
         case type
         case role
@@ -101,35 +88,19 @@ struct ResponsesOutputItem: Decodable {
         case arguments
     }
 
-    func asToolCall() -> ToolCall? {
+    func asToolRequest() -> ToolRequest? {
         guard type == "function_call" else { return nil }
         let identifier = callId ?? id ?? UUID().uuidString
-        let functionName = name ?? ""
-        return ToolCall(id: identifier, type: "function", function: Function(name: functionName, argumentsJSON: arguments))
+        let functionName = name ?? "tool"
+        let args = arguments ?? "{}"
+        return ToolRequest(id: identifier, name: functionName, args: args)
     }
 
-    func asChoice(toolCalls: [ToolCall]) -> ChatChoice? {
+    var textContent: String? {
         guard type == "message" else { return nil }
         let textSegments = content?.compactMap(\.resolvedContent) ?? []
-        let reasoningSegments = content?.compactMap(\.reasoningContent) ?? []
-        let hasRefusal = content?.contains(where: \.isRefusal) ?? false
-        let hasToolCalls = !toolCalls.isEmpty
-
-        let message = ChoiceMessage(
-            content: textSegments.isEmpty ? nil : textSegments.joined(),
-            reasoning: nil,
-            reasoningContent: reasoningSegments.isEmpty ? nil : reasoningSegments.joined(separator: "\n"),
-            role: role ?? "assistant",
-            toolCalls: toolCalls.isEmpty ? nil : toolCalls,
-        )
-        let finishReason: String? = if hasRefusal {
-            "refusal"
-        } else if hasToolCalls {
-            "tool_calls"
-        } else {
-            "stop"
-        }
-        return ChatChoice(finishReason: finishReason, message: message)
+        guard !textSegments.isEmpty else { return nil }
+        return textSegments.joined()
     }
 }
 
@@ -192,21 +163,4 @@ struct ResponsesErrorPayload: Decodable {
     let code: String?
     let message: String?
     let param: String?
-}
-
-private extension ChatChoice {
-    func appending(toolCalls newCalls: [ToolCall]) -> ChatChoice {
-        guard !newCalls.isEmpty else { return self }
-        var mergedToolCalls = message.toolCalls ?? []
-        mergedToolCalls.append(contentsOf: newCalls)
-        let finish: String = finishReason == "refusal" ? "refusal" : "tool_calls"
-        let updatedMessage = ChoiceMessage(
-            content: message.content,
-            reasoning: message.reasoning,
-            reasoningContent: message.reasoningContent,
-            role: message.role,
-            toolCalls: mergedToolCalls,
-        )
-        return ChatChoice(finishReason: finish, message: updatedMessage)
-    }
 }

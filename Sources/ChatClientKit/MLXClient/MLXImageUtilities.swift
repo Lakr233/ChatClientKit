@@ -17,7 +17,7 @@ enum MLXImageContentMode {
 }
 
 enum MLXImageUtilities {
-    private static let defaultColor = CGColor(gray: 1.0, alpha: 1.0)
+    static let defaultColor = CGColor(gray: 1.0, alpha: 1.0)
 
     static func placeholderImage(
         size: CGSize,
@@ -92,7 +92,7 @@ enum MLXImageUtilities {
         ))
     }
 
-    private static func crop(image: CIImage, to rect: CGRect) -> CIImage {
+    static func crop(image: CIImage, to rect: CGRect) -> CIImage {
         let cropped = image.cropped(to: rect)
         return normalize(image: cropped)
     }

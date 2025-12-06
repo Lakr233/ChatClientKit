@@ -131,7 +131,7 @@ public struct ServerSentEvent: EVEvent {
     }
 }
 
-private extension Data {
+ extension Data {
     var utf8String: String {
         String(decoding: self, as: UTF8.self)
     }

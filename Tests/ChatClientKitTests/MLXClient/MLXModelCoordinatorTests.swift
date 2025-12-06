@@ -57,7 +57,7 @@ struct MLXModelCoordinatorTests {
     }
 }
 
-private func modelConfiguration() throws -> ModelConfiguration {
+ func modelConfiguration() throws -> ModelConfiguration {
     let url = TestHelpers.fixtureURLOrSkip(named: "mlx_testing_model")
     return ModelConfiguration(directory: url)
 }

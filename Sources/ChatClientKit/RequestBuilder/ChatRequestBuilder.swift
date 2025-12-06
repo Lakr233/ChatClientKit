@@ -59,8 +59,6 @@ public enum ChatRequestBuilder {
 }
 
 public extension ChatRequest {
-    typealias BuildComponent = @Sendable (inout ChatRequest) -> Void
-
     init(@ChatRequestBuilder _ content: @Sendable () -> [BuildComponent]) {
         self.init(messages: [])
         apply(content())

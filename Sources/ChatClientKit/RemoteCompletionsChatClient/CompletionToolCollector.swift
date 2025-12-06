@@ -1,5 +1,5 @@
 //
-//  ToolCallCollector.swift
+//  CompletionToolCollector.swift
 //  ChatClientKit
 //
 //  Created by GPT-5 Codex on 2025/11/10.
@@ -7,12 +7,12 @@
 
 import Foundation
 
-final class ToolCallCollector {
-    private var functionName = ""
-    private var functionArguments = ""
-    private var toolCallID: String?
-    private var currentId: Int?
-    private(set) var pendingRequests: [ToolCallRequest] = []
+class CompletionToolCollector {
+    var functionName = ""
+    var functionArguments = ""
+    var toolCallID: String?
+    var currentId: Int?
+    var pendingRequests: [ToolRequest] = []
 
     func submit(delta: ChatCompletionChunk.Choice.Delta.ToolCall) {
         guard let function = delta.function else { return }
@@ -37,7 +37,7 @@ final class ToolCallCollector {
         guard !functionName.isEmpty || !functionArguments.isEmpty else {
             return
         }
-        let call = ToolCallRequest(
+        let call = ToolRequest(
             id: toolCallID,
             name: functionName,
             args: functionArguments,

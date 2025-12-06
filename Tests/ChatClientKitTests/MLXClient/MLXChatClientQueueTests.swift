@@ -11,8 +11,8 @@ import Testing
 
 @Suite("MLX Chat Client Queue", .serialized)
 struct MLXChatClientQueueTests {
-    private actor AcquisitionTracker {
-        private var didAcquire = false
+     actor AcquisitionTracker {
+         var didAcquire = false
 
         func markAcquired() {
             didAcquire = true
@@ -23,10 +23,10 @@ struct MLXChatClientQueueTests {
         }
     }
 
-    private actor TimingTracker {
-        private var attemptTimes: [String: Date] = [:]
-        private var firstChunkTimes: [String: Date] = [:]
-        private var completionTimes: [String: Date] = [:]
+     actor TimingTracker {
+         var attemptTimes: [String: Date] = [:]
+         var firstChunkTimes: [String: Date] = [:]
+         var completionTimes: [String: Date] = [:]
 
         func recordAttempt(_ label: String, at date: Date = Date()) {
             if attemptTimes[label] == nil {
@@ -130,7 +130,7 @@ struct MLXChatClientQueueTests {
         #expect(secondFirstChunk.timeIntervalSince(firstCompletion) >= -tolerance)
     }
 
-    private func runStreamingInference(
+     func runStreamingInference(
         label: String,
         prompt: String,
         client: MLXChatClient,
@@ -162,7 +162,7 @@ struct MLXChatClientQueueTests {
         return chunkEvents
     }
 
-    private func makeStreamingRequest(prompt: String) -> ChatRequestBody {
+     func makeStreamingRequest(prompt: String) -> ChatRequestBody {
         ChatRequestBody(
             messages: [
                 .system(content: .text("You are a concise testing assistant.")),

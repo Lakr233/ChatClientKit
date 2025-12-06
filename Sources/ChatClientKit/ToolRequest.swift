@@ -1,5 +1,5 @@
 //
-//  ToolCallRequest.swift
+//  ToolRequest.swift
 //  ChatClientKit
 //
 //  Created by 秋星桥 on 2/27/25.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct ToolCallRequest: Codable, Equatable, Hashable, Sendable {
+public struct ToolRequest: Codable, Equatable, Hashable, Sendable {
     public var id: String = UUID().uuidString
 
     public let name: String

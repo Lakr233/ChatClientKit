@@ -8,7 +8,7 @@
 import Foundation
 
 struct RemoteCompletionsChatErrorExtractor {
-    private let unknownErrorMessage: String
+    let unknownErrorMessage: String
 
     init(unknownErrorMessage: String = String(localized: "Unknown Error")) {
         self.unknownErrorMessage = unknownErrorMessage
@@ -64,7 +64,7 @@ struct RemoteCompletionsChatErrorExtractor {
         return nil
     }
 
-    private func extractMessage(in dictionary: [String: Any]) -> String? {
+    func extractMessage(in dictionary: [String: Any]) -> String? {
         var queue: [Any] = [dictionary]
         while !queue.isEmpty {
             let current = queue.removeFirst()

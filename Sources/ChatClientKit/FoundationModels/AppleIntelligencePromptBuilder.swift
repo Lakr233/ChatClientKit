@@ -85,7 +85,7 @@ enum AppleIntelligencePromptBuilder {
     }
 }
 
-private func extractPlainText(
+func extractPlainText(
     _ content: ChatRequestBody.Message.MessageContent<String, [String]>,
 ) -> String {
     switch content {
@@ -96,7 +96,7 @@ private func extractPlainText(
     }
 }
 
-private func extractTextFromUser(
+func extractTextFromUser(
     _ content: ChatRequestBody.Message.MessageContent<String, [ChatRequestBody.Message.ContentPart]>,
 ) -> String {
     switch content {
@@ -109,7 +109,7 @@ private func extractTextFromUser(
     }
 }
 
-private func extractTextFromAssistant(
+func extractTextFromAssistant(
     _ content: ChatRequestBody.Message.MessageContent<String, [String]>?,
 ) -> String? {
     guard let content else { return nil }
@@ -117,7 +117,7 @@ private func extractTextFromAssistant(
     return text.isEmpty ? nil : text
 }
 
-private func makeRoleLine(role: String, name: String?, text: String) -> String {
+func makeRoleLine(role: String, name: String?, text: String) -> String {
     if let name, !name.isEmpty {
         return "\(role) (\(name)): \(text)"
     }

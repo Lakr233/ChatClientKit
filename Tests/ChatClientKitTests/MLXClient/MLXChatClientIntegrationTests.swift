@@ -28,7 +28,7 @@ struct MLXChatClientIntegrationTests {
             ),
         )
 
-        let content = response.choices.first?.message.content?
+        let content = response.textValue?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         #expect(!content.isEmpty)

@@ -7,7 +7,7 @@ import Foundation
 
 public enum ChatServiceStreamObject: Sendable {
     case chatCompletionChunk(chunk: ChatCompletionChunk)
-    case tool(call: ToolCallRequest)
+    case tool(call: ToolRequest)
 }
 
 public protocol ChatService: AnyObject, Sendable {

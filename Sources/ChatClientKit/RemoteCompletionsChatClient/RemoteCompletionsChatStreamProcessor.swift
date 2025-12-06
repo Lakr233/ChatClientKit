@@ -9,16 +9,16 @@ import Foundation
 import ServerEvent
 
 struct RemoteCompletionsChatStreamProcessor {
-    private let eventSourceFactory: EventSourceProducing
-    private let chunkDecoder: JSONDecoding
-    private let errorExtractor: RemoteCompletionsChatErrorExtractor
-    private let reasoningParser: ReasoningContentParser
+    let eventSourceFactory: EventSourceProducing
+    let chunkDecoder: JSONDecoding
+    let errorExtractor: RemoteCompletionsChatErrorExtractor
+    let reasoningParser: CompletionReasoningContentCollector
 
     init(
         eventSourceFactory: EventSourceProducing = DefaultEventSourceFactory(),
         chunkDecoder: JSONDecoding = JSONDecoderWrapper(),
         errorExtractor: RemoteCompletionsChatErrorExtractor = RemoteCompletionsChatErrorExtractor(),
-        reasoningParser: ReasoningContentParser = .init(),
+        reasoningParser: CompletionReasoningContentCollector = .init(),
     ) {
         self.eventSourceFactory = eventSourceFactory
         self.chunkDecoder = chunkDecoder
@@ -39,7 +39,7 @@ struct RemoteCompletionsChatStreamProcessor {
             Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, reasoningParser, request] in
                 var canDecodeReasoningContent = true
                 var reducer = ReasoningStreamReducer(parser: reasoningParser)
-                let toolCallCollector = ToolCallCollector()
+                let toolCallCollector = CompletionToolCollector()
                 var chunkCount = 0
                 var totalContentLength = 0
 

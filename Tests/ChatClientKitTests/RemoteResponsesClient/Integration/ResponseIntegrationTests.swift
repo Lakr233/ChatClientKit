@@ -27,7 +27,7 @@ struct ResponseIntegrationTests {
             ChatRequest.temperature(0.3)
         }
 
-        guard let content = response.choices.first?.message.content else {
+        guard let content = response.textValue else {
             Issue.record("Response contained no message content.")
             return
         }

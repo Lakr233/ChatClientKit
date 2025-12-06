@@ -9,9 +9,9 @@ import Foundation
 import ServerEvent
 
 struct RemoteResponsesChatStreamProcessor {
-    private let eventSourceFactory: EventSourceProducing
-    private let chunkDecoder: JSONDecoding
-    private let errorExtractor: RemoteResponsesChatErrorExtractor
+    let eventSourceFactory: EventSourceProducing
+    let chunkDecoder: JSONDecoding
+    let errorExtractor: RemoteResponsesChatErrorExtractor
 
     init(
         eventSourceFactory: EventSourceProducing = DefaultEventSourceFactory(),
@@ -103,7 +103,7 @@ struct RemoteResponsesChatStreamProcessor {
                     let hasTools = toolCollector.hasPendingRequests
                     finishReasonEmitted = true
                     let terminalChoice = ChatCompletionChunk.Choice(
-                        delta: .init(content: nil, reasoningContent: nil, refusal: nil, role: "assistant"),
+                        delta: .init(content: nil, reasoningContent: nil, role: "assistant"),
                         finishReason: finishReason(for: .responseCompleted, hasToolCalls: hasTools),
                         index: nil,
                     )
@@ -122,7 +122,7 @@ struct RemoteResponsesChatStreamProcessor {
     }
 }
 
-private extension RemoteResponsesChatStreamProcessor {
+extension RemoteResponsesChatStreamProcessor {
     struct OutputItemMetadata: Sendable {
         let role: String
         let outputIndex: Int?
@@ -177,7 +177,7 @@ private extension RemoteResponsesChatStreamProcessor {
             return makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
-                refusal: delta,
+                content: delta,
                 finishReason: nil,
             )
         case .refusalDone:
@@ -186,7 +186,7 @@ private extension RemoteResponsesChatStreamProcessor {
             return makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
-                refusal: payload.refusal ?? payload.text ?? payload.delta,
+                content: payload.refusal ?? payload.text ?? payload.delta,
                 finishReason: finishReason(for: payload.kind, hasToolCalls: toolCollector.hasPendingRequests),
             )
         case .functionCallArgumentsDelta:
@@ -289,7 +289,6 @@ private extension RemoteResponsesChatStreamProcessor {
         outputMetadata: [String: OutputItemMetadata],
         content: String? = nil,
         reasoning: String? = nil,
-        refusal: String? = nil,
         finishReason: String?,
     ) -> ChatCompletionChunk {
         let role = payload.itemID.flatMap { outputMetadata[$0]?.role } ?? "assistant"
@@ -297,7 +296,6 @@ private extension RemoteResponsesChatStreamProcessor {
             delta: .init(
                 content: content,
                 reasoningContent: reasoning,
-                refusal: refusal,
                 role: role,
             ),
             finishReason: finishReason,
@@ -342,7 +340,7 @@ private extension RemoteResponsesChatStreamProcessor {
     }
 }
 
-private struct ResponsesStreamEvent: Decodable {
+struct ResponsesStreamEvent: Decodable {
     enum Kind: String {
         case outputTextDelta = "response.output_text.delta"
         case outputTextDone = "response.output_text.done"
@@ -387,7 +385,7 @@ private struct ResponsesStreamEvent: Decodable {
 
     var kind: Kind { Kind(rawValue: type) ?? .unknown }
 
-    private enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey {
         case type
         case delta
         case text
@@ -438,10 +436,10 @@ private struct ResponsesStreamEvent: Decodable {
         type.contains("_call") || type.contains("tool.")
     }
 
-    func placeholderToolCall() -> ToolCallRequest? {
+    func placeholderToolCall() -> ToolRequest? {
         guard isToolLike else { return nil }
         let identifier = itemID ?? UUID().uuidString
         let args = arguments ?? delta ?? text ?? message ?? "{}"
-        return ToolCallRequest(id: identifier, name: type, args: args)
+        return ToolRequest(id: identifier, name: type, args: args)
     }
 }

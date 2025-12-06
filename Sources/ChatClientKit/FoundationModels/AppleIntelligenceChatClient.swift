@@ -3,7 +3,7 @@ import Foundation
 import FoundationModels
 
 @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
-public final class AppleIntelligenceChatClient: ChatService {
+public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
     public struct Configuration: Sendable {
         public var persona: String
         public var streamingPersona: String
@@ -22,7 +22,7 @@ public final class AppleIntelligenceChatClient: ChatService {
 
     public let errorCollector = ChatServiceErrorCollector()
 
-    private let configuration: Configuration
+    let configuration: Configuration
 
     public init(configuration: Configuration = .init()) {
         self.configuration = configuration
@@ -35,7 +35,7 @@ public final class AppleIntelligenceChatClient: ChatService {
         )
 
         var accumulatedContent = ""
-        var pendingToolCall: ToolCallRequest?
+        var pendingToolCall: ToolRequest?
 
         for try await object in stream {
             switch object {
@@ -48,39 +48,12 @@ public final class AppleIntelligenceChatClient: ChatService {
             }
         }
 
-        if let toolCallRequest = pendingToolCall {
-            let toolCall = ToolCall(
-                id: toolCallRequest.id,
-                functionName: toolCallRequest.name,
-                argumentsJSON: toolCallRequest.args,
-            )
-            let choice = ChatChoice(
-                finishReason: "tool_calls",
-                message: ChoiceMessage(
-                    content: nil,
-                    role: "assistant",
-                    toolCalls: [toolCall],
-                ),
-            )
-            return ChatResponseBody(
-                choices: [choice],
-                created: Int(Date().timeIntervalSince1970),
-                model: AppleIntelligenceModel.shared.modelIdentifier,
-            )
+        if let toolCall = pendingToolCall {
+            return .tool(toolCall)
         }
 
         let trimmed = accumulatedContent.trimmingCharacters(in: .whitespacesAndNewlines)
-        let message = ChoiceMessage(
-            content: trimmed.isEmpty ? nil : trimmed,
-            role: "assistant",
-            toolCalls: nil,
-        )
-        let choice = ChatChoice(finishReason: "stop", message: message)
-        return ChatResponseBody(
-            choices: [choice],
-            created: Int(Date().timeIntervalSince1970),
-            model: AppleIntelligenceModel.shared.modelIdentifier,
-        )
+        return .text(trimmed)
     }
 
     public func streamingChatCompletionRequest(
@@ -92,13 +65,13 @@ public final class AppleIntelligenceChatClient: ChatService {
         )
     }
 
-    private struct SessionContext {
+    struct SessionContext {
         let session: LanguageModelSession
         let prompt: String
         let options: GenerationOptions
     }
 
-    private func makeSessionContext(
+    func makeSessionContext(
         body: ChatRequestBody,
         persona: String,
     ) throws -> SessionContext {
@@ -130,7 +103,7 @@ public final class AppleIntelligenceChatClient: ChatService {
         return SessionContext(session: session, prompt: prompt, options: options)
     }
 
-    private func makeToolProxies(
+    func makeToolProxies(
         from tools: [ChatRequestBody.Tool]?,
     ) -> [any Tool] {
         guard let tools, !tools.isEmpty else { return [] }
@@ -147,7 +120,7 @@ public final class AppleIntelligenceChatClient: ChatService {
         }
     }
 
-    private func renderSchemaDescription(
+    func renderSchemaDescription(
         _ parameters: [String: AnyCodingValue]?,
     ) -> String? {
         guard let parameters else { return nil }
@@ -155,7 +128,7 @@ public final class AppleIntelligenceChatClient: ChatService {
         return String(data: data, encoding: .utf8)
     }
 
-    private func toolUsageInstructions(hasTools: Bool) -> [String] {
+    func toolUsageInstructions(hasTools: Bool) -> [String] {
         guard hasTools else {
             return [
                 "No tools are available for this task, so answer the user directly without attempting any tool calls.",
@@ -166,14 +139,14 @@ public final class AppleIntelligenceChatClient: ChatService {
         ]
     }
 
-    private func clampTemperature(_ value: Double) -> Double {
+    func clampTemperature(_ value: Double) -> Double {
         if value.isNaN || !value.isFinite {
             return configuration.defaultTemperature
         }
         return min(max(value, 0), 2)
     }
 
-    private func makeStreamingSequence(
+    func makeStreamingSequence(
         body: ChatRequestBody,
         persona: String,
     ) throws -> AnyAsyncSequence<ChatServiceStreamObject> {
@@ -212,22 +185,16 @@ public final class AppleIntelligenceChatClient: ChatService {
 
                         guard !newContent.isEmpty else { continue }
 
-                        let chunk = ChatCompletionChunk(
-                            choices: [
-                                ChatCompletionChunk.Choice(
-                                    delta: .init(
-                                        content: newContent,
-                                        reasoning: nil,
-                                        reasoningContent: nil,
-                                        refusal: nil,
-                                        role: "assistant",
-                                        toolCalls: nil,
-                                    ),
+                        let chunk = ChatCompletionChunk(choices: [
+                            ChatCompletionChunk.Choice(
+                                delta: .init(
+                                    content: newContent,
+                                    role: "assistant",
+                                    toolCalls: nil,
+                                    images: nil,
                                 ),
-                            ],
-                            created: Int(Date().timeIntervalSince1970),
-                            model: AppleIntelligenceModel.shared.modelIdentifier,
-                        )
+                            ),
+                        ])
                         continuation.yield(.chatCompletionChunk(chunk: chunk))
                     }
                     continuation.finish()

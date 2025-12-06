@@ -1,8 +1,8 @@
 //
-//  RemoteCompletionsChatClientDependencies.swift
+//  RemoteClientDependencies.swift
 //  ChatClientKit
 //
-//  Created by GPT-5 Codex on 2025/11/10.
+//  Shared dependency container for remote chat clients.
 //
 
 import Foundation
@@ -30,7 +30,7 @@ struct DefaultEventSourceFactory: EventSourceProducing {
     }
 }
 
-private struct DefaultEventStreamTask: EventStreamTask, @unchecked Sendable {
+struct DefaultEventStreamTask: EventStreamTask, @unchecked Sendable {
     let dataTask: EventSource.DataTask
 
     func events() -> AsyncStream<EventSource.EventType> {
@@ -38,24 +38,24 @@ private struct DefaultEventStreamTask: EventStreamTask, @unchecked Sendable {
     }
 }
 
-public struct RemoteCompletionsChatClientDependencies: Sendable {
+public struct RemoteClientDependencies: Sendable {
     var session: URLSessioning
     var eventSourceFactory: EventSourceProducing
     var responseDecoderFactory: @Sendable () -> JSONDecoding
     var chunkDecoderFactory: @Sendable () -> JSONDecoding
     var errorExtractor: RemoteCompletionsChatErrorExtractor
-    var reasoningParser: ReasoningContentParser
-    var requestSanitizer: ChatRequestSanitizing
+    var reasoningParser: CompletionReasoningContentCollector
+    var requestSanitizer: RequestSanitizing
 
-    static var live: RemoteCompletionsChatClientDependencies {
+    static var live: RemoteClientDependencies {
         .init(
             session: URLSession.shared,
             eventSourceFactory: DefaultEventSourceFactory(),
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteCompletionsChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
     }
 }
@@ -65,7 +65,7 @@ protocol JSONDecoding: Sendable {
 }
 
 struct JSONDecoderWrapper: JSONDecoding {
-    private let makeDecoder: @Sendable () -> JSONDecoder
+    let makeDecoder: @Sendable () -> JSONDecoder
 
     init(makeDecoder: @escaping @Sendable () -> JSONDecoder = { JSONDecoder() }) {
         self.makeDecoder = makeDecoder

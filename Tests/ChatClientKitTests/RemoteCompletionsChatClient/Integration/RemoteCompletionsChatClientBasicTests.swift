@@ -21,13 +21,9 @@ struct RemoteCompletionsChatClientBasicTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.model.contains("gemini"))
-        #expect(response.choices.count > 0)
-        let message = response.choices.first?.message
-        #expect(message != nil)
-        #expect(message?.content != nil)
-        #expect(message?.content?.isEmpty == false)
-        #expect(message?.content?.lowercased().contains("hello") == true)
+        let text = try #require(response.textValue)
+        #expect(text.isEmpty == false)
+        #expect(text.lowercased().contains("hello") == true)
     }
 
     @Test("Streaming chat completion with text message", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
@@ -68,8 +64,7 @@ struct RemoteCompletionsChatClientBasicTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         if content.isEmpty {
             Issue.record("Response content was empty; Google Gemini sometimes omits text for short deterministic prompts.")
         }
@@ -87,8 +82,7 @@ struct RemoteCompletionsChatClientBasicTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         if content.isEmpty {
             Issue.record("Response content was empty when requesting numbers 1 through 10.")
         }
@@ -108,8 +102,7 @@ struct RemoteCompletionsChatClientBasicTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
+        let content = response.textValue ?? ""
         #expect(content.isEmpty == false)
     }
 
@@ -126,11 +119,8 @@ struct RemoteCompletionsChatClientBasicTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let content = response.choices.first?.message.content ?? ""
-        let reasoning = response.choices.first?.message.reasoning ?? ""
-        let reasoningContent = response.choices.first?.message.reasoningContent ?? ""
-        #expect([content, reasoning, reasoningContent].allSatisfy(\.isEmpty) == false)
+        let content = response.textValue ?? ""
+        #expect(content.isEmpty == false)
     }
 
     @Test("Streaming chat completion collects all chunks", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
@@ -145,7 +135,7 @@ struct RemoteCompletionsChatClientBasicTests {
 
         var contentChunks: [String] = []
         var reasoningChunks: [String] = []
-        var toolCalls: [ToolCallRequest] = []
+        var toolCalls: [ToolRequest] = []
 
         for try await object in stream {
             switch object {

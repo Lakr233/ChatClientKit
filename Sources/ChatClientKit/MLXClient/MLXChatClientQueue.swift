@@ -7,14 +7,14 @@
 
 import Foundation
 
-public final class MLXChatClientQueue: @unchecked Sendable {
+public class MLXChatClientQueue: @unchecked Sendable {
     public nonisolated static let shared = MLXChatClientQueue()
 
-    private let semaphore = DispatchSemaphore(value: 1)
-    private let lock = NSLock()
-    private var runningTokens: Set<UUID> = []
+    let semaphore = DispatchSemaphore(value: 1)
+    let lock = NSLock()
+    var runningTokens: Set<UUID> = []
 
-    private init() {}
+    init() {}
 
     @discardableResult
     public func acquire() -> UUID {

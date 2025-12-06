@@ -7,15 +7,15 @@
 
 import Foundation
 
-final class ResponsesToolCallCollector {
+class ResponsesToolCallCollector {
     struct Pending {
         var id: String
         var name: String
         var arguments: String
     }
 
-    private var storage: [String: Pending] = [:]
-    private var order: [String] = []
+    var storage: [String: Pending] = [:]
+    var order: [String] = []
 
     func observe(item: ResponsesOutputItem) {
         guard item.type == "function_call" else { return }
@@ -73,10 +73,10 @@ final class ResponsesToolCallCollector {
         }
     }
 
-    func finalizeRequests() -> [ToolCallRequest] {
+    func finalizeRequests() -> [ToolRequest] {
         order.map { id in
             let pending = storage[id] ?? Pending(id: id, name: "", arguments: "")
-            return ToolCallRequest(id: pending.id, name: pending.name, args: pending.arguments)
+            return ToolRequest(id: pending.id, name: pending.name, args: pending.arguments)
         }
     }
 

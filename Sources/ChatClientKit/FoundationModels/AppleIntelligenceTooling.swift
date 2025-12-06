@@ -4,7 +4,7 @@ import FoundationModels
 
 @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
 enum AppleIntelligenceToolError: Error {
-    case invocationCaptured(ToolCallRequest)
+    case invocationCaptured(ToolRequest)
 }
 
 @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
@@ -42,7 +42,7 @@ struct AppleIntelligenceToolProxy: Tool {
 
     func call(arguments: AppleIntelligenceToolArguments) async throws -> String {
         let payload = arguments.payload.trimmingCharacters(in: .whitespacesAndNewlines)
-        let request = ToolCallRequest(name: name, args: payload.isEmpty ? "{}" : payload)
+        let request = ToolRequest(name: name, args: payload.isEmpty ? "{}" : payload)
         throw AppleIntelligenceToolError.invocationCaptured(request)
     }
 }

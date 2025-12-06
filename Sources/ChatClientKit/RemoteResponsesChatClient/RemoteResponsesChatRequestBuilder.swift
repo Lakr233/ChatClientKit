@@ -13,7 +13,7 @@ struct RemoteResponsesRequestBuilder {
     let apiKey: String?
     var additionalHeaders: [String: String]
 
-    private let encoder: JSONEncoder
+    let encoder: JSONEncoder
 
     init(
         baseURL: String?,

@@ -27,8 +27,7 @@ struct RemoteResponsesChatClientLiveTests {
             ChatRequest.temperature(0.4)
         }
 
-        let message = response.choices.first?.message
-        let content = message?.content?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) ?? ""
+        let content = response.textValue?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) ?? ""
         #expect(!content.isEmpty, "Expected non-empty response content")
     }
 
@@ -76,11 +75,7 @@ struct RemoteResponsesChatClientLiveTests {
             ChatRequest.temperature(0.2)
         }
 
-        guard let content = response.choices.first?.message.content else {
-            Issue.record("Response content missing despite successful call.")
-            return
-        }
-
+        let content = response.textValue ?? ""
         #expect(!content.isEmpty)
     }
 
@@ -101,12 +96,10 @@ struct RemoteResponsesChatClientLiveTests {
             ChatRequest.maxCompletionTokens(4096)
         }
 
-        guard let content = response.choices.first?.message.content else {
+        let content = response.textValue ?? ""
+        if content.isEmpty {
             Issue.record("Response content missing for multi-turn request.")
-            return
-        }
-
-        if !content.isEmpty, !content.lowercased().contains("alice") {
+        } else if !content.lowercased().contains("alice") {
             Issue.record("Model response did not echo the provided name. Content: \(content)")
         }
     }

@@ -1,19 +1,51 @@
 @testable import ChatClientKit
 import Testing
 
+import Foundation
 import FoundationModels
+
+// Convenience shims to align test expectations with current ChatClientKit types.
+private typealias Function = ChatRequestBody.Message.ToolCall.Function
+private typealias ToolCall = ChatCompletionChunk.Choice.Delta.ToolCall
+
+private extension ChatRequestBody.Message.ToolCall.Function {
+    var argumentsRaw: String? { arguments }
+
+    var parsedArguments: [String: Any]? {
+        guard let arguments, let data = arguments.data(using: .utf8) else { return nil }
+        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+    }
+}
+
+private extension ChatCompletionChunk.Choice.Delta.ToolCall.Function {
+    var parsedArguments: [String: Any]? {
+        guard let arguments, let data = arguments.data(using: .utf8) else { return nil }
+        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+    }
+}
+
+private extension ChatCompletionChunk.Choice.Delta.ToolCall {
+    init(id: String, functionName: String, argumentsJSON: String) {
+        self.init(
+            index: nil,
+            id: id,
+            type: "function",
+            function: .init(name: functionName, arguments: argumentsJSON)
+        )
+    }
+}
 
 @Suite("Apple Intelligence Function Tests")
 struct AppleIntelligenceFunctionTests {
     @Test("Function initializer parses arguments")
     func functionInitializerParsesArguments() {
         let json = #"{"query":"weather","count":3}"#
-        let function = Function(name: "tool", argumentsJSON: json)
+        let function = Function(name: "tool", arguments: json)
 
         #expect(function.name == "tool")
         #expect(function.argumentsRaw == json)
 
-        guard let arguments = function.arguments else {
+        guard let arguments = function.parsedArguments else {
             Issue.record("Expected parsed arguments")
             return
         }
@@ -24,11 +56,11 @@ struct AppleIntelligenceFunctionTests {
     @Test("Function initializer handles invalid JSON")
     func functionInitializerHandlesInvalidJSON() {
         let json = "{ invalid json"
-        let function = Function(name: "tool", argumentsJSON: json)
+        let function = Function(name: "tool", arguments: json)
 
         #expect(function.name == "tool")
         #expect(function.argumentsRaw == json)
-        #expect(function.arguments == nil)
+        #expect(function.parsedArguments == nil)
     }
 
     @Test("Tool call initializer produces function call")
@@ -37,8 +69,9 @@ struct AppleIntelligenceFunctionTests {
 
         #expect(call.id == "call-id")
         #expect(call.type == "function")
-        #expect(call.function.name == "tool")
-        #expect(call.function.arguments?["value"] as? Int == 42)
+        #expect(call.function?.name == "tool")
+        let args = call.function?.parsedArguments ?? [:]
+        #expect(args["value"] as? Int == 42)
     }
 }
 
@@ -122,11 +155,10 @@ struct AppleIntelligenceIntegrationTests {
 
         let response = try await client.chatCompletionRequest(body: body)
 
-        #expect(response.choices.count == 1)
-        #expect(response.choices.first?.message.content != nil)
-        #expect(response.choices.first?.message.content?.isEmpty ?? true == false)
+        let text = try #require(response.textValue)
+        #expect(text.isEmpty == false)
 
-        print("✅ Basic completion test passed. Response: \(response.choices.first?.message.content ?? "")")
+        print("✅ Basic completion test passed. Response: \(text)")
     }
 
     @Test("Streaming chat completion", .enabled(if: TestHelpers.isAppleIntelligenceAvailable))
@@ -198,23 +230,13 @@ struct AppleIntelligenceIntegrationTests {
 
         let response = try await client.chatCompletionRequest(body: body)
 
-        #expect(response.choices.count == 1)
-        let choice = response.choices.first
-        #expect(choice != nil)
-
-        if let toolCalls = choice?.message.toolCalls, !toolCalls.isEmpty {
-            print("✅ Tool call test passed. Generated \(toolCalls.count) tool call(s)")
-            for (index, call) in toolCalls.enumerated() {
-                print("  Tool call \(index + 1): \(call.function.name)")
-                if let args = call.function.arguments {
-                    print("    Arguments: \(args)")
-                }
-            }
-        } else {
+        if let tool = response.toolValue {
+            print("✅ Tool call test passed. Generated tool call \(tool.name) args: \(tool.args)")
+        } else if let content = response.textValue {
             print("⚠️ Model did not generate tool calls (may respond directly instead)")
-            if let content = choice?.message.content {
-                print("  Response content: \(content)")
-            }
+            print("  Response content: \(content)")
+        } else {
+            Issue.record("No tool call or text content returned.")
         }
     }
 }

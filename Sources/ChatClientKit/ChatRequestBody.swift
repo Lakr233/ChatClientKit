@@ -20,7 +20,7 @@ public struct ChatRequestBody: Sendable, Encodable {
 
     public let tools: [Tool]?
 
-    private enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey {
         // required
         case model
         case messages
@@ -115,7 +115,7 @@ public extension ChatRequestBody {
             }
         }
 
-        private enum RootKey: String, CodingKey, Equatable {
+        enum RootKey: String, CodingKey, Equatable {
             case content
             case name
             case reasoning
@@ -188,19 +188,19 @@ public extension ChatRequestBody.Message {
         /// The format parameter describes the container or codec (e.g. "wav").
         case audioBase64(String, format: String)
 
-        private enum RootKey: String, CodingKey {
+        enum RootKey: String, CodingKey {
             case type
             case text
             case imageURL = "image_url"
             case audio = "input_audio"
         }
 
-        private enum ImageKey: CodingKey {
+        enum ImageKey: CodingKey {
             case url
             case detail
         }
 
-        private enum AudioKey: CodingKey {
+        enum AudioKey: CodingKey {
             case data
             case format
         }
@@ -262,6 +262,10 @@ public extension ChatRequestBody.Message {
     }
 }
 
+public extension ChatRequestBody {
+    // Image configuration should be sent via extra body when needed.
+}
+
 public extension ChatRequestBody.Message.ToolCall {
     /// Represents the 'Function' object at `messages > assistant message > tool_calls > function`
     /// https://platform.openai.com/docs/api-reference/chat/create#chat-create-messages
@@ -311,12 +315,12 @@ public extension ChatRequestBody {
             strict: Bool?,
         )
 
-        private enum RootKey: CodingKey {
+        enum RootKey: CodingKey {
             case type
             case function
         }
 
-        private enum FunctionKey: CodingKey {
+        enum FunctionKey: CodingKey {
             case description
             case name
             case parameters

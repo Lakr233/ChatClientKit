@@ -44,15 +44,15 @@ public struct DefaultMLXModelLoader: MLXModelLoading {
 public actor MLXModelCoordinator: MLXModelCoordinating {
     public nonisolated static let shared = MLXModelCoordinator()
 
-    private struct CacheKey: Equatable, Sendable {
+    struct CacheKey: Equatable, Sendable {
         let identifier: ModelConfiguration.Identifier
         let kind: MLXModelKind
     }
 
-    private let loader: MLXModelLoading
-    private var cachedKey: CacheKey?
-    private var cachedContainer: ModelContainer?
-    private var pendingTask: Task<ModelContainer, Error>?
+    let loader: MLXModelLoading
+    var cachedKey: CacheKey?
+    var cachedContainer: ModelContainer?
+    var pendingTask: Task<ModelContainer, Error>?
 
     public init(loader: MLXModelLoading = DefaultMLXModelLoader()) {
         self.loader = loader

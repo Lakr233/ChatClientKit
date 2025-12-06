@@ -44,18 +44,12 @@ struct RemoteCompletionsChatToolTests {
 
         let response = try await client.chatCompletionRequest(body: request)
 
-        #expect(response.choices.count > 0)
-        let message = response.choices.first?.message
-        #expect(message != nil)
-
         // The model should either call the tool or provide a response
-        if let toolCalls = message?.toolCalls, !toolCalls.isEmpty {
-            #expect(toolCalls.count > 0)
-            let toolCall = toolCalls.first!
-            #expect(toolCall.function.name == "get_weather")
+        if let tool = response.toolCall {
+            #expect(tool.name == "get_weather")
         } else {
-            // Or it might just respond directly
-            #expect(message?.content != nil)
+            let text = response.textValue ?? ""
+            #expect(text.isEmpty == false)
         }
     }
 
@@ -88,7 +82,7 @@ struct RemoteCompletionsChatToolTests {
 
         let stream = try await client.streamingChatCompletionRequest(body: request)
 
-        var toolCalls: [ToolCallRequest] = []
+        var toolCalls: [ToolRequest] = []
         var contentChunks: [String] = []
 
         for try await object in stream {
@@ -135,7 +129,7 @@ struct RemoteCompletionsChatToolTests {
 
         let stream = try await client.streamingChatCompletionRequest(body: request)
 
-        var collectedToolCalls: [ToolCallRequest] = []
+        var collectedToolCalls: [ToolRequest] = []
 
         for try await object in stream {
             if case let .tool(call) = object {

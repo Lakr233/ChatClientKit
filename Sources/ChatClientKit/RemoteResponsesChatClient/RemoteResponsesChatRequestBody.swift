@@ -16,7 +16,7 @@ struct ResponsesRequestBody: Sendable, Encodable {
     let maxOutputTokens: Int?
     let tools: [Tool]?
 
-    private enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey {
         case model
         case input
         case instructions
@@ -59,7 +59,7 @@ extension ResponsesRequestBody {
         case functionCall(callID: String, name: String, arguments: String?)
         case functionCallOutput(callID: String, output: String)
 
-        private enum CodingKeys: String, CodingKey {
+        enum CodingKeys: String, CodingKey {
             case type
             case role
             case content
@@ -97,7 +97,7 @@ extension ResponsesRequestBody {
         case inputImage(url: URL, detail: ChatRequestBody.Message.ContentPart.ImageDetail?)
         case inputAudio(data: String, format: String)
 
-        private enum CodingKeys: String, CodingKey {
+        enum CodingKeys: String, CodingKey {
             case type
             case text
             case annotations
@@ -105,12 +105,12 @@ extension ResponsesRequestBody {
             case inputAudio = "input_audio"
         }
 
-        private enum ImageKeys: String, CodingKey {
+        enum ImageKeys: String, CodingKey {
             case url
             case detail
         }
 
-        private enum AudioKeys: String, CodingKey {
+        enum AudioKeys: String, CodingKey {
             case data
             case format
         }
@@ -198,7 +198,7 @@ struct ResponsesRequestTransformer: Sendable {
     }
 }
 
-private extension ResponsesRequestTransformer {
+extension ResponsesRequestTransformer {
     func flattenTextContent(
         _ content: ChatRequestBody.Message.MessageContent<String, [String]>,
     ) -> String? {

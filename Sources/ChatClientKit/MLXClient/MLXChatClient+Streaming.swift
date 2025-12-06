@@ -101,12 +101,12 @@ extension MLXChatClient {
     }
 }
 
-private struct ChunkDecodeResult {
+struct ChunkDecodeResult {
     let chunk: ChatCompletionChunk?
     let shouldStop: Bool
 }
 
-private struct ChunkDecoder {
+struct ChunkDecoder {
     let context: ModelContext
 
     mutating func decode(
@@ -151,7 +151,7 @@ private struct ChunkDecoder {
         return .init(chunk: chunk, shouldStop: shouldStop)
     }
 
-    private func toggleReasoningIfNeeded(lastToken: Int?, isReasoning: inout Bool) -> Bool {
+    func toggleReasoningIfNeeded(lastToken: Int?, isReasoning: inout Bool) -> Bool {
         guard let lastToken else { return false }
         let text = context.tokenizer.decode(tokens: [lastToken]).trimmingCharacters(in: .whitespacesAndNewlines)
         if !isReasoning, text == REASONING_START_TOKEN {

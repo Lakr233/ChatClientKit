@@ -8,14 +8,14 @@
 
 import Foundation
 
-final class SessionDelegate: NSObject, URLSessionDataDelegate {
+class SessionDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     enum Event: Sendable {
         case didCompleteWithError(Error?)
         case didReceiveResponse(URLResponse, @Sendable (URLSession.ResponseDisposition) -> Void)
         case didReceiveData(Data)
     }
 
-    private let internalStream = AsyncStream<Event>.makeStream()
+     let internalStream = AsyncStream<Event>.makeStream()
 
     var eventStream: AsyncStream<Event> { internalStream.stream }
 

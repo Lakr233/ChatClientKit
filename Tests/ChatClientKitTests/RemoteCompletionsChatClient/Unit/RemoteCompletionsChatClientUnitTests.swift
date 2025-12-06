@@ -33,7 +33,7 @@ struct RemoteCompletionsChatClientUnitTests {
             expectedContentLength: responseData.count,
             textEncodingName: nil,
         )
-        let session = MockURLSession(result: .success((responseData, response)))
+        let session = MockCompletionsURLSession(result: .success((responseData, response)))
 
         let dependencies = RemoteChatClientDependencies(
             session: session,
@@ -41,8 +41,8 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -61,11 +61,8 @@ struct RemoteCompletionsChatClientUnitTests {
 
         let result = try await client.chatCompletionRequest(body: request)
 
-        #expect(result.model == "gpt-test")
-        #expect(result.choices.count == 1)
-        let choice = try #require(result.choices.first)
-        #expect(choice.message.reasoningContent == "internal")
-        #expect(choice.message.content == "Final answer")
+        let text = try #require(result.textValue)
+        #expect(text.contains("Final answer"))
 
         let madeRequest = try #require(session.lastRequest)
         #expect(madeRequest.url?.absoluteString == "https://example.com/v1/chat/completions")
@@ -90,8 +87,8 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -141,8 +138,8 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -161,8 +158,7 @@ struct RemoteCompletionsChatClientUnitTests {
             }
         }
 
-        #expect(result.model == "gpt-test")
-        #expect(result.choices.first?.message.content == "Answer")
+        #expect(result.textValue == "Answer")
 
         let madeRequest = try #require(session.lastRequest)
         let bodyData = try #require(madeRequest.httpBody)
@@ -186,7 +182,7 @@ struct RemoteCompletionsChatClientUnitTests {
             expectedContentLength: responseData.count,
             textEncodingName: nil,
         )
-        let session = MockURLSession(result: .success((responseData, response)))
+        let session = MockCompletionsURLSession(result: .success((responseData, response)))
 
         let dependencies = RemoteChatClientDependencies(
             session: session,
@@ -194,8 +190,8 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -221,8 +217,8 @@ struct RemoteCompletionsChatClientUnitTests {
 
     @Test("Streaming chat completion request emits reasoning and tool calls")
     func streamingChatCompletionRequest_emitsReasoningAndToolCalls() async throws {
-        let session = MockURLSession(result: .failure(TestError()))
-        let eventFactory = MockEventSourceFactory()
+        let session = MockCompletionsURLSession(result: .failure(CompletionsTestError()))
+        let eventFactory = MockCompletionsEventSourceFactory()
 
         let reasoningChunk = #"{"choices":[{"delta":{"content":"<think>internal</think>Visible"}}]}"#
         let toolChunkPart1 = #"{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"foo","arguments":"{\"value\":"}}]}}]}"#
@@ -230,9 +226,9 @@ struct RemoteCompletionsChatClientUnitTests {
 
         eventFactory.recordedEvents = [
             .open,
-            .event(TestEvent(data: reasoningChunk)),
-            .event(TestEvent(data: toolChunkPart1)),
-            .event(TestEvent(data: toolChunkPart2)),
+            .event(CompletionsTestEvent(data: reasoningChunk)),
+            .event(CompletionsTestEvent(data: toolChunkPart1)),
+            .event(CompletionsTestEvent(data: toolChunkPart2)),
             .closed,
         ]
 
@@ -242,8 +238,8 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: ReasoningContentParser(),
-            requestSanitizer: ChatRequestSanitizer(),
+            reasoningParser: CompletionReasoningContentCollector(),
+            requestSanitizer: RequestSanitizer(),
         )
 
         let client = RemoteCompletionsChatClient(
@@ -277,7 +273,7 @@ struct RemoteCompletionsChatClientUnitTests {
         }.last
         #expect(contentDelta == "Visible")
 
-        let toolCall = received.compactMap { object -> ToolCallRequest? in
+        let toolCall = received.compactMap { object -> ToolRequest? in
             if case let .tool(call) = object { return call }
             return nil
         }.first
@@ -293,7 +289,7 @@ struct RemoteCompletionsChatClientUnitTests {
 
 // MARK: - Test Doubles
 
-private final class MockURLSession: URLSessioning, @unchecked Sendable {
+ class MockCompletionsURLSession: URLSessioning, @unchecked Sendable {
     var result: Result<(Data, URLResponse), Swift.Error>
     private(set) var lastRequest: URLRequest?
 
@@ -307,17 +303,17 @@ private final class MockURLSession: URLSessioning, @unchecked Sendable {
     }
 }
 
-private final class MockEventSourceFactory: EventSourceProducing, @unchecked Sendable {
+ class MockCompletionsEventSourceFactory: EventSourceProducing, @unchecked Sendable {
     var recordedEvents: [EventSource.EventType] = []
     private(set) var lastRequest: URLRequest?
 
     func makeDataTask(for request: URLRequest) -> EventStreamTask {
         lastRequest = request
-        return MockEventStreamTask(recordedEvents: recordedEvents)
+        return MockCompletionsEventStreamTask(recordedEvents: recordedEvents)
     }
 }
 
-private struct MockEventStreamTask: EventStreamTask {
+ struct MockCompletionsEventStreamTask: EventStreamTask {
     let recordedEvents: [EventSource.EventType]
 
     func events() -> AsyncStream<EventSource.EventType> {
@@ -330,7 +326,7 @@ private struct MockEventStreamTask: EventStreamTask {
     }
 }
 
-private struct TestEvent: EVEvent {
+ struct CompletionsTestEvent: EVEvent {
     var id: String?
     var event: String?
     var data: String?
@@ -352,4 +348,4 @@ private struct TestEvent: EVEvent {
     }
 }
 
-private struct TestError: Swift.Error {}
+ struct CompletionsTestError: Swift.Error {}
