@@ -66,6 +66,24 @@ enum TestHelpers {
         )
     }
 
+    static func makeOpenRouterResponsesClient(
+        model: String = defaultOpenRouterModel
+    ) -> RemoteResponsesChatClient {
+        let apiKey = requireAPIKey()
+        return RemoteResponsesChatClient(
+            model: model,
+            baseURL: "https://openrouter.ai/api",
+            path: "/v1/responses",
+            apiKey: apiKey,
+            additionalHeaders: [
+                "HTTP-Referer": "https://github.com/FlowDown/ChatClientKit",
+                "X-Title": "ChatClientKit Tests",
+            ]
+        )
+    }
+
+    static let defaultOpenRouterModel: String = "google/gemini-3-pro-preview"
+
     /// Resolves a fixture URL relative to the repository root.
     /// Precondition: Fixture must exist (check with appropriate condition before using)
     static func fixtureURLOrSkip(named name: String, file: StaticString = #filePath) -> URL {
