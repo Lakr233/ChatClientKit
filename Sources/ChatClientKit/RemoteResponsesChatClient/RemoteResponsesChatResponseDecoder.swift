@@ -119,7 +119,6 @@ struct ResponsesOutputItem: Decodable {
             content: textSegments.isEmpty ? nil : textSegments.joined(),
             reasoning: nil,
             reasoningContent: reasoningSegments.isEmpty ? nil : reasoningSegments.joined(separator: "\n"),
-            reasoningDetails: nil,
             role: role ?? "assistant",
             toolCalls: toolCalls.isEmpty ? nil : toolCalls,
         )
@@ -205,7 +204,6 @@ private extension ChatChoice {
             content: message.content,
             reasoning: message.reasoning,
             reasoningContent: message.reasoningContent,
-            reasoningDetails: message.reasoningDetails,
             role: message.role,
             toolCalls: mergedToolCalls,
         )

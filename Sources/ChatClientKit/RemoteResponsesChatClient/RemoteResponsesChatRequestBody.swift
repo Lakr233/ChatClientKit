@@ -14,7 +14,7 @@ struct ResponsesRequestBody: Sendable, Encodable {
     let stream: Bool?
     let temperature: Double?
     let maxOutputTokens: Int?
-    let tools: [ChatRequestBody.Tool]?
+    let tools: [Tool]?
 
     private enum CodingKeys: String, CodingKey {
         case model
@@ -24,6 +24,32 @@ struct ResponsesRequestBody: Sendable, Encodable {
         case temperature
         case maxOutputTokens = "max_output_tokens"
         case tools
+    }
+}
+
+extension ResponsesRequestBody {
+    struct Tool: Sendable, Encodable {
+        let type: String
+        let name: String
+        let description: String?
+        let parameters: [String: AnyCodingValue]?
+        let strict: Bool?
+
+        init(_ tool: ChatRequestBody.Tool) {
+            switch tool {
+            case let .function(
+                name: name,
+                description: description,
+                parameters: parameters,
+                strict: strict,
+            ):
+                type = "function"
+                self.name = name
+                self.description = description
+                self.parameters = parameters
+                self.strict = strict
+            }
+        }
     }
 }
 
@@ -135,7 +161,7 @@ struct ResponsesRequestTransformer: Sendable {
                 if !parts.isEmpty {
                     inputItems.append(.message(role: "user", content: parts))
                 }
-            case let .assistant(content, toolCalls, _, _):
+            case let .assistant(content, toolCalls, _):
                 if let parts = mapAssistantContent(content) {
                     inputItems.append(.message(role: "assistant", content: parts))
                 }
@@ -167,7 +193,7 @@ struct ResponsesRequestTransformer: Sendable {
             stream: stream,
             temperature: chatBody.temperature,
             maxOutputTokens: chatBody.maxCompletionTokens,
-            tools: chatBody.tools,
+            tools: chatBody.tools?.map(ResponsesRequestBody.Tool.init),
         )
     }
 }

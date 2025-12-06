@@ -45,6 +45,7 @@ public struct RemoteCompletionsChatClientDependencies: Sendable {
     var chunkDecoderFactory: @Sendable () -> JSONDecoding
     var errorExtractor: RemoteCompletionsChatErrorExtractor
     var reasoningParser: ReasoningContentParser
+    var requestSanitizer: ChatRequestSanitizing
 
     static var live: RemoteCompletionsChatClientDependencies {
         .init(
@@ -54,6 +55,7 @@ public struct RemoteCompletionsChatClientDependencies: Sendable {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteCompletionsChatErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
     }
 }

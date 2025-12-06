@@ -121,12 +121,11 @@ extension ChatRequest {
 
     static func normalizeMessage(_ message: Message) -> Message {
         switch message {
-        case let .assistant(content, toolCalls, reasoning, reasoningDetails):
+        case let .assistant(content, toolCalls, reasoning):
             .assistant(
                 content: normalizeAssistantContent(content),
                 toolCalls: normalizeToolCalls(toolCalls),
                 reasoning: trimmed(reasoning),
-                reasoningDetails: normalizeReasoningDetails(reasoningDetails, fallback: trimmed(reasoning)),
             )
         case let .developer(content, name):
             .developer(content: normalizeTextContent(content), name: trimmed(name))
@@ -153,22 +152,6 @@ extension ChatRequest {
                 .filter { !$0.isEmpty }
             return normalized.isEmpty ? nil : .parts(normalized)
         }
-    }
-
-    static func normalizeReasoningDetails(
-        _ details: [ReasoningDetail]?,
-        fallback: String?,
-    ) -> [ReasoningDetail]? {
-        let merged = details?.filter { detail in
-            !(detail.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? false)
-                || detail.data != nil
-                || detail.id != nil
-        }
-        var normalized = merged ?? []
-        if normalized.isEmpty, let fallback, !fallback.isEmpty {
-            normalized = [ReasoningDetail(type: "reasoning.text", text: fallback, format: nil, index: 0)]
-        }
-        return normalized.isEmpty ? nil : normalized
     }
 
     static func normalizeTextContent(
@@ -273,10 +256,10 @@ extension ChatRequest {
 
         for message in messages {
             switch message {
-            case let .assistant(content, toolCalls, reasoning, reasoningDetails):
+            case let .assistant(content, toolCalls, reasoning):
                 if var current = pending {
                     current.append(content: content)
-                    current.append(reasoning: reasoning, details: reasoningDetails)
+                    current.append(reasoning: reasoning)
                     current.append(toolCalls: toolCalls)
                     pending = current
                 } else {
@@ -284,7 +267,6 @@ extension ChatRequest {
                         content: content,
                         toolCalls: toolCalls,
                         reasoning: reasoning,
-                        reasoningDetails: reasoningDetails,
                     )
                 }
             default:
@@ -302,7 +284,6 @@ private struct PendingAssistant {
     var content: ChatRequest.Message.MessageContent<String, [String]>?
     var toolCalls: [ChatRequest.Message.ToolCall]?
     var reasoning: String?
-    var reasoningDetails: [ReasoningDetail]?
 
     mutating func append(content newContent: ChatRequest.Message.MessageContent<String, [String]>?) {
         guard let newContent else { return }
@@ -329,7 +310,7 @@ private struct PendingAssistant {
         }
     }
 
-    mutating func append(reasoning newReasoning: String?, details newDetails: [ReasoningDetail]?) {
+    mutating func append(reasoning newReasoning: String?) {
         if let incoming = newReasoning, !(incoming.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
             if let existing = reasoning {
                 let separator = existing.isEmpty || incoming.isEmpty ? "" : "\n"
@@ -337,17 +318,6 @@ private struct PendingAssistant {
             } else {
                 reasoning = incoming
             }
-        }
-        if let newDetails, !newDetails.isEmpty {
-            var mergedDetails = reasoningDetails ?? []
-            for detail in newDetails {
-                if let index = mergedDetails.firstIndex(where: { $0.matchesContinuation(of: detail) }) {
-                    mergedDetails[index].merge(with: detail)
-                } else {
-                    mergedDetails.append(detail)
-                }
-            }
-            reasoningDetails = mergedDetails
         }
     }
 
@@ -361,7 +331,6 @@ private struct PendingAssistant {
             content: content,
             toolCalls: toolCalls,
             reasoning: reasoning,
-            reasoningDetails: reasoningDetails,
         )
     }
 }

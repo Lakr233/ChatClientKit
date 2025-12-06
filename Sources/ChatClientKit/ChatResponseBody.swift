@@ -59,8 +59,6 @@ public struct ChoiceMessage: Decodable {
     /// The reasoning behin the message.
     public var reasoning: String?
     public var reasoningContent: String?
-    public var reasoningDetails: [ReasoningDetail]?
-
     /// The role of the author of this message.
     public let role: String
 
@@ -71,7 +69,6 @@ public struct ChoiceMessage: Decodable {
         case content
         case reasoning
         case reasoningContent = "reasoning_content"
-        case reasoningDetails = "reasoning_details"
         case role
         case toolCalls = "tool_calls"
     }
@@ -80,14 +77,12 @@ public struct ChoiceMessage: Decodable {
         content: String? = nil,
         reasoning: String? = nil,
         reasoningContent: String? = nil,
-        reasoningDetails: [ReasoningDetail]? = nil,
         role: String,
         toolCalls: [ToolCall]? = nil,
     ) {
         self.content = content
         self.reasoning = reasoning
         self.reasoningContent = reasoningContent
-        self.reasoningDetails = reasoningDetails
         self.role = role
         self.toolCalls = toolCalls
     }

@@ -22,6 +22,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(
@@ -71,6 +72,71 @@ struct RemoteResponsesClientUnitTests {
         #expect(tool["output"] as? String == "tool result")
     }
 
+    @Test("Encodes tools using responses schema")
+    func makeURLRequest_encodesToolsWithFlatSchema() throws {
+        let session = MockURLSession(result: .failure(TestError()))
+        let dependencies = RemoteResponsesClientDependencies(
+            session: session,
+            eventSourceFactory: DefaultEventSourceFactory(),
+            responseDecoderFactory: { JSONDecoderWrapper() },
+            chunkDecoderFactory: { JSONDecoderWrapper() },
+            errorExtractor: RemoteResponsesErrorExtractor(),
+            reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
+        )
+
+        let client = RemoteResponsesClient(
+            model: "gpt-resp",
+            baseURL: "https://example.com",
+            path: "/v1/responses",
+            apiKey: TestHelpers.requireAPIKey(),
+            dependencies: dependencies,
+        )
+
+        let parameters: [String: AnyCodingValue] = [
+            "type": .string("object"),
+            "properties": .object([
+                "query": .object([
+                    "type": .string("string"),
+                ]),
+            ]),
+            "required": .array([.string("query")]),
+        ]
+        let body = ChatRequestBody(
+            messages: [.user(content: .text("hi"))],
+            tools: [
+                .function(
+                    name: "search",
+                    description: "Searches the index",
+                    parameters: parameters,
+                    strict: true,
+                ),
+            ],
+        )
+
+        let request = try client.makeURLRequest(from: body, stream: false)
+        let bodyData = try #require(request.httpBody)
+        let json = try #require(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
+
+        let tools = try #require(json["tools"] as? [[String: Any]])
+        #expect(tools.count == 1)
+
+        let tool = try #require(tools.first)
+        #expect(tool["type"] as? String == "function")
+        #expect(tool["name"] as? String == "search")
+        #expect(tool["description"] as? String == "Searches the index")
+        #expect(tool["strict"] as? Bool == true)
+        #expect(tool["function"] == nil)
+
+        let encodedParameters = try #require(tool["parameters"] as? [String: Any])
+        #expect(encodedParameters["type"] as? String == "object")
+        let properties = try #require(encodedParameters["properties"] as? [String: Any])
+        let query = try #require(properties["query"] as? [String: Any])
+        #expect(query["type"] as? String == "string")
+        let required = try #require(encodedParameters["required"] as? [String])
+        #expect(required == ["query"])
+    }
+
     @Test("Includes assistant tool calls in responses payload")
     func makeURLRequest_includesAssistantToolCalls() throws {
         let session = MockURLSession(result: .failure(TestError()))
@@ -81,6 +147,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(
@@ -159,6 +226,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(
@@ -177,6 +245,31 @@ struct RemoteResponsesClientUnitTests {
         let toolCall = try #require(choice.message.toolCalls?.first)
         #expect(toolCall.function.name == "do_thing")
         #expect(toolCall.function.argumentsRaw == "{\"value\":42}")
+    }
+
+    @Test("Decodes function-only output into tool call choice")
+    func chatCompletionRequest_handlesFunctionOnlyOutput() throws {
+        let responseJSON: [String: Any] = [
+            "output": [
+                [
+                    "type": "function_call",
+                    "call_id": "call_only",
+                    "name": "only_tool",
+                    "arguments": "{\"ready\":true}",
+                ],
+            ],
+        ]
+        let responseData = try JSONSerialization.data(withJSONObject: responseJSON)
+        let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
+
+        let result = try decoder.decodeResponse(from: responseData)
+        #expect(result.choices.count == 1)
+        let choice = try #require(result.choices.first)
+        #expect(choice.finishReason == "tool_calls")
+        let toolCall = try #require(choice.message.toolCalls?.first)
+        #expect(toolCall.id == "call_only")
+        #expect(toolCall.function.name == "only_tool")
+        #expect(toolCall.function.argumentsRaw == "{\"ready\":true}")
     }
 
     @Test("Decodes multiple output items and keeps tool calls with their message")
@@ -291,6 +384,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(
@@ -350,6 +444,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(
@@ -394,6 +489,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(
@@ -436,6 +532,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(
@@ -478,6 +575,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(
@@ -578,6 +676,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(
@@ -619,6 +718,7 @@ struct RemoteResponsesClientUnitTests {
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteResponsesErrorExtractor(),
             reasoningParser: ReasoningContentParser(),
+            requestSanitizer: ChatRequestSanitizer(),
         )
 
         let client = RemoteResponsesClient(

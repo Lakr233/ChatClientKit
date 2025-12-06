@@ -31,6 +31,7 @@ public final class RemoteResponsesChatClient: ChatService {
     private let chunkDecoderFactory: @Sendable () -> JSONDecoding
     private let errorExtractor: RemoteResponsesChatErrorExtractor
     private let requestTransformer: ResponsesRequestTransformer
+    private let requestSanitizer: ChatRequestSanitizing
 
     public convenience init(
         model: String,
@@ -72,6 +73,7 @@ public final class RemoteResponsesChatClient: ChatService {
         chunkDecoderFactory = dependencies.chunkDecoderFactory
         errorExtractor = dependencies.errorExtractor
         requestTransformer = ResponsesRequestTransformer()
+        requestSanitizer = dependencies.requestSanitizer
     }
 
     public func chatCompletionRequest(body: ChatRequestBody) async throws -> ChatResponseBody {
@@ -179,7 +181,8 @@ private extension RemoteResponsesChatClient {
         var requestBody = body.mergingAdjacentAssistantMessages()
         requestBody.model = model
         requestBody.stream = stream
-        return requestTransformer.makeRequestBody(from: requestBody, model: model, stream: stream)
+        let sanitized = requestSanitizer.sanitize(requestBody)
+        return requestTransformer.makeRequestBody(from: sanitized, model: model, stream: stream)
     }
 
     func collect(error: Swift.Error) async {

@@ -60,7 +60,6 @@ public extension ChatRequestBody {
             content: MessageContent<String, [String]>? = nil,
             toolCalls: [ToolCall]? = nil,
             reasoning: String? = nil,
-            reasoningDetails: [ReasoningDetail]? = nil,
         )
 
         /// Developer-provided instructions that the model should follow, regardless of messages sent by the user.
@@ -120,7 +119,6 @@ public extension ChatRequestBody {
             case content
             case name
             case reasoning
-            case reasoningDetails = "reasoning_details"
             case role
             case toolCallID = "tool_call_id"
             case toolCalls = "tool_calls"
@@ -130,10 +128,9 @@ public extension ChatRequestBody {
             var container = encoder.container(keyedBy: RootKey.self)
             try container.encode(role, forKey: .role)
             switch self {
-            case let .assistant(content, toolCalls, reasoning, reasoningDetails):
+            case let .assistant(content, toolCalls, reasoning):
                 try container.encodeIfPresent(content, forKey: .content)
                 try container.encodeIfPresent(reasoning, forKey: .reasoning)
-                try container.encodeIfPresent(reasoningDetails, forKey: .reasoningDetails)
                 try container.encodeIfPresent(toolCalls, forKey: .toolCalls)
             case let .developer(content, name):
                 try container.encode(content, forKey: .content)

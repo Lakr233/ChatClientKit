@@ -146,13 +146,11 @@ public extension ChatRequest {
         content: MessageContent<String, [String]>?,
         toolCalls: [Message.ToolCall]? = nil,
         reasoning: String? = nil,
-        reasoningDetails: [ReasoningDetail]? = nil,
     ) -> BuildComponent {
         message(.assistant(
             content: content,
             toolCalls: toolCalls,
             reasoning: reasoning,
-            reasoningDetails: reasoningDetails,
         ))
     }
 
