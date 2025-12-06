@@ -145,14 +145,22 @@ struct RemoteCompletionsChatStreamProcessor {
 }
 
 private func parseDataURL(_ text: String) -> (data: Data, mimeType: String?)? {
-    guard text.lowercased().hasPrefix("data:") else { return nil }
-    let parts = text.split(separator: ",", maxSplits: 1).map(String.init)
-    guard parts.count == 2 else { return nil }
-    let header = parts[0] // data:image/png;base64
-    let body = parts[1]
-    let mimeType = header
-        .replacingOccurrences(of: "data:", with: "")
-        .replacingOccurrences(of: ";base64", with: "")
-    guard let decoded = Data(base64Encoded: body) else { return nil }
-    return (decoded, mimeType.isEmpty ? nil : mimeType)
+    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.lowercased().hasPrefix("data:") {
+        let parts = trimmed.split(separator: ",", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { return nil }
+        let header = parts[0] // data:image/png;base64
+        let body = parts[1]
+        let mimeType = header
+            .replacingOccurrences(of: "data:", with: "")
+            .replacingOccurrences(of: ";base64", with: "")
+        guard let decoded = Data(base64Encoded: body, options: .ignoreUnknownCharacters) else { return nil }
+        return (decoded, mimeType.isEmpty ? nil : mimeType)
+    }
+
+    if let decoded = Data(base64Encoded: trimmed, options: .ignoreUnknownCharacters) {
+        return (decoded, nil)
+    }
+
+    return nil
 }
