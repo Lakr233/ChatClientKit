@@ -34,4 +34,3 @@ enum SanitizationRule: CaseIterable {
         }
     }
 }
-
