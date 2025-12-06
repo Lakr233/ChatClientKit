@@ -59,9 +59,9 @@ struct RemoteCompletionsChatClientUnitTests {
             .user(content: .text("Hello")),
         ])
 
-        let result = try await client.chat(body: request)
+        let result: ChatResponse = try await client.chat(body: request)
 
-        let text = try #require(result.textValue)
+        let text = try #require(result.text.isEmpty ? nil : result.text)
         #expect(text.contains("Final answer"))
 
         let madeRequest = try #require(session.lastRequest)
@@ -100,10 +100,7 @@ struct RemoteCompletionsChatClientUnitTests {
             dependencies: dependencies,
         )
 
-        let request = try client.makeURLRequest(
-            from: ChatRequestBody(messages: [.user(content: .text("Hello"))]),
-            stream: false,
-        )
+        let request = try client.makeURLRequest(body: ChatRequestBody(messages: [.user(content: .text("Hello"))]))
 
         #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
         #expect(request.value(forHTTPHeaderField: "cf-aig-authorization") == "Bearer gateway-token")
@@ -150,7 +147,7 @@ struct RemoteCompletionsChatClientUnitTests {
             dependencies: dependencies,
         )
 
-        let result = try await client.chatCompletion {
+        let resultChunks = try await client.chatChunks {
             ChatRequest.temperature(0.3)
             ChatRequest.messages {
                 ChatRequest.Message.system(content: .text("  sys "))
@@ -158,7 +155,7 @@ struct RemoteCompletionsChatClientUnitTests {
             }
         }
 
-        #expect(result.textValue == "Answer")
+        #expect(ChatResponse(chunks: resultChunks).text == "Answer")
 
         let madeRequest = try #require(session.lastRequest)
         let bodyData = try #require(madeRequest.httpBody)

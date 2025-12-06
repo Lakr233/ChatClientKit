@@ -87,7 +87,6 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
             await self?.collect(error: error)
         }
     }
-
 }
 
 extension RemoteResponsesChatClient {

@@ -39,5 +39,4 @@ public class MLXChatClient: ChatService, @unchecked Sendable {
             throw error
         }
     }
-
 }

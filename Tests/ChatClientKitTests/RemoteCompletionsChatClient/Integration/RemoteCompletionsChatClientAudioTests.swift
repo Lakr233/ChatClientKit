@@ -24,9 +24,9 @@ struct RemoteCompletionsChatClientAudioTests {
             ])),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         #expect(content.isEmpty == false)
     }
 
@@ -43,14 +43,12 @@ struct RemoteCompletionsChatClientAudioTests {
             ])),
         ])
 
-        let stream = try await client.streamingChatCompletionRequest(body: request)
+        let stream = try await client.streamingChat(body: request)
 
         var fullContent = ""
         for try await chunk in stream {
-            if case let .chatCompletionChunk(completionChunk) = chunk {
-                if let content = completionChunk.choices.first?.delta.content {
-                    fullContent += content
-                }
+            if let content = chunk.textValue {
+                fullContent += content
             }
         }
 
@@ -70,9 +68,9 @@ struct RemoteCompletionsChatClientAudioTests {
             ])),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         #expect(content.isEmpty == false)
     }
 
@@ -91,9 +89,9 @@ struct RemoteCompletionsChatClientAudioTests {
             .user(content: .text("What did you hear?")),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         #expect(content.isEmpty == false)
     }
 
@@ -112,14 +110,12 @@ struct RemoteCompletionsChatClientAudioTests {
             ])),
         ])
 
-        let stream = try await client.streamingChatCompletionRequest(body: request)
+        let stream = try await client.streamingChat(body: request)
 
         var fullContent = ""
         for try await chunk in stream {
-            if case let .chatCompletionChunk(completionChunk) = chunk {
-                if let content = completionChunk.choices.first?.delta.content {
-                    fullContent += content
-                }
+            if let content = chunk.textValue {
+                fullContent += content
             }
         }
 

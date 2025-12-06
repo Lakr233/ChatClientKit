@@ -18,7 +18,7 @@ struct ResponseIntegrationTests {
     func responsesRequestReturnsContent() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
-        let responseChunks = try await client.responses {
+        let responseChunks = try await client.chatChunks {
             ChatRequest.model(TestHelpers.defaultOpenRouterModel)
             ChatRequest.messages {
                 ChatRequest.Message.system(content: .text("You are a concise assistant."))
@@ -39,7 +39,7 @@ struct ResponseIntegrationTests {
     func responsesStreamingYieldsChunks() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
-        let stream = try await client.streamingResponses {
+        let stream = try await client.streamingChat {
             ChatRequest.model(TestHelpers.defaultOpenRouterModel)
             ChatRequest.messages {
                 ChatRequest.Message.system(content: .text("Respond with short poetic lines."))

@@ -139,21 +139,21 @@ struct MLXChatClientQueueTests {
     ) async throws -> Int {
         await tracker.recordAttempt(label)
         let request = makeStreamingRequest(prompt: prompt)
-        let stream = try await client.streamingChatCompletionRequest(body: request)
+        let stream = try await client.streamingChat(body: request)
 
         var chunkEvents = 0
         var recordedFirstChunk = false
 
         for try await event in stream {
             switch event {
-            case .chatCompletionChunk:
+            case .text:
                 chunkEvents += 1
                 if !recordedFirstChunk {
                     await tracker.recordFirstChunkIfNeeded(label)
                     recordedFirstChunk = true
                     onFirstChunk?()
                 }
-            case .tool:
+            default:
                 continue
             }
         }

@@ -153,9 +153,9 @@ struct AppleIntelligenceIntegrationTests {
             temperature: 0.5,
         )
 
-        let response = try await client.chatCompletionRequest(body: body)
+        let response: ChatResponse = try await client.chat(body: body)
 
-        let text = try #require(response.textValue)
+        let text = try #require(response.text.isEmpty ? nil : response.text)
         #expect(text.isEmpty == false)
 
         print("✅ Basic completion test passed. Response: \(text)")
@@ -174,18 +174,15 @@ struct AppleIntelligenceIntegrationTests {
             temperature: 0.3,
         )
 
-        let stream = try await client.streamingChatCompletionRequest(body: body)
+        let stream = try await client.streamingChat(body: body)
         var accumulatedContent = ""
         var chunkCount = 0
 
-        for try await object in stream {
-            switch object {
-            case let .chatCompletionChunk(chunk):
-                if let content = chunk.choices.first?.delta.content {
-                    accumulatedContent += content
-                    chunkCount += 1
-                }
-            case .tool:
+        for try await chunk in stream {
+            if let content = chunk.textValue {
+                accumulatedContent += content
+                chunkCount += 1
+            } else if case .tool = chunk {
                 Issue.record("Unexpected tool call in basic streaming test")
             }
         }
@@ -228,13 +225,13 @@ struct AppleIntelligenceIntegrationTests {
             tools: tools,
         )
 
-        let response = try await client.chatCompletionRequest(body: body)
+        let response: ChatResponse = try await client.chat(body: body)
 
-        if let tool = response.toolValue {
+        if let tool = response.tools.first {
             print("✅ Tool call test passed. Generated tool call \(tool.name) args: \(tool.args)")
-        } else if let content = response.textValue {
+        } else if !response.text.isEmpty {
             print("⚠️ Model did not generate tool calls (may respond directly instead)")
-            print("  Response content: \(content)")
+            print("  Response content: \(response.text)")
         } else {
             Issue.record("No tool call or text content returned.")
         }

@@ -19,9 +19,9 @@ struct RemoteCompletionsChatClientBasicTests {
             .user(content: .text("Say 'Hello, World!' in one sentence.")),
         ])
 
-        let response = try await client.chat(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let text = try #require(response.textValue)
+        let text = try #require(response.text.isEmpty ? nil : response.text)
         #expect(text.isEmpty == false)
         #expect(text.lowercased().contains("hello") == true)
     }
@@ -60,9 +60,9 @@ struct RemoteCompletionsChatClientBasicTests {
             .user(content: .text("Say hello")),
         ])
 
-        let response = try await client.chat(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         if content.isEmpty {
             Issue.record("Response content was empty; Google Gemini sometimes omits text for short deterministic prompts.")
         }
@@ -78,9 +78,9 @@ struct RemoteCompletionsChatClientBasicTests {
             .user(content: .text("What's my name?")),
         ])
 
-        let response = try await client.chat(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         if content.isEmpty {
             Issue.record("Response content was empty when requesting numbers 1 through 10.")
         }
@@ -98,9 +98,9 @@ struct RemoteCompletionsChatClientBasicTests {
             temperature: 0.5,
         )
 
-        let response = try await client.chat(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         if content.isEmpty {
             Issue.record("Expected non-empty completion when max tokens is set.")
         }
@@ -117,9 +117,9 @@ struct RemoteCompletionsChatClientBasicTests {
             maxCompletionTokens: 512, // reasoning content counts too
         )
 
-        let response = try await client.chat(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         #expect(content.isEmpty == false)
     }
 
@@ -137,19 +137,16 @@ struct RemoteCompletionsChatClientBasicTests {
         var reasoningChunks: [String] = []
         var toolCalls: [ToolRequest] = []
 
-        for try await object in stream {
-            switch object {
-            case let .chatCompletionChunk(chunk):
-                if let delta = chunk.choices.first?.delta {
-                    if let content = delta.content {
-                        contentChunks.append(content)
-                    }
-                    if let reasoning = delta.reasoningContent {
-                        reasoningChunks.append(reasoning)
-                    }
-                }
+        for try await chunk in stream {
+            switch chunk {
+            case let .text(content):
+                contentChunks.append(content)
+            case let .reasoning(reasoning):
+                reasoningChunks.append(reasoning)
             case let .tool(call):
                 toolCalls.append(call)
+            default:
+                break
             }
         }
 

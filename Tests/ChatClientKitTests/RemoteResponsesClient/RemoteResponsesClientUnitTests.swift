@@ -41,7 +41,9 @@ struct RemoteResponsesClientUnitTests {
             .tool(content: .text("tool result"), toolCallID: "call-1"),
         ])
 
-        let request = try client.makeURLRequest(from: body, stream: false)
+        let request = try client.makeURLRequest(
+            body: client.resolve(body: body, stream: false),
+        )
         #expect(request.url?.absoluteString == "https://example.com/v1/responses")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer \(TestHelpers.requireAPIKey())")
         #expect(request.value(forHTTPHeaderField: "X-Test") == "value")
@@ -114,7 +116,9 @@ struct RemoteResponsesClientUnitTests {
             ],
         )
 
-        let request = try client.makeURLRequest(from: body, stream: false)
+        let request = try client.makeURLRequest(
+            body: client.resolve(body: body, stream: false),
+        )
         let bodyData = try #require(request.httpBody)
         let json = try #require(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
 
@@ -167,7 +171,9 @@ struct RemoteResponsesClientUnitTests {
             .tool(content: .text("result text"), toolCallID: "call-1"),
         ])
 
-        let request = try client.makeURLRequest(from: body, stream: false)
+        let request = try client.makeURLRequest(
+            body: client.resolve(body: body, stream: false),
+        )
         let bodyData = try #require(request.httpBody)
         let json = try #require(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
 
@@ -212,13 +218,13 @@ struct RemoteResponsesClientUnitTests {
             ],
         ]
         let responseData = try JSONSerialization.data(withJSONObject: responseJSON)
-        let response = URLResponse(
+        let urlResponse = URLResponse(
             url: URL(string: "https://example.com/v1/responses")!,
             mimeType: "application/json",
             expectedContentLength: responseData.count,
             textEncodingName: nil,
         )
-        let session = MockURLSession(result: .success((responseData, response)))
+        let session = MockURLSession(result: .success((responseData, urlResponse)))
         let dependencies = RemoteClientDependencies(
             session: session,
             eventSourceFactory: DefaultEventSourceFactory(),
@@ -237,7 +243,7 @@ struct RemoteResponsesClientUnitTests {
             dependencies: dependencies,
         )
 
-        let chunks: [ChatResponseChunk] = try await client.chat(
+        let chunks: [ChatResponseChunk] = try await client.chatChunks(
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
         let response = ChatResponse(chunks: chunks)
@@ -266,7 +272,7 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        let tool = try #require(result.toolValue)
+        let tool = try #require(ChatResponse(chunks: result).tools.first)
         #expect(tool.id == "call_only")
         #expect(tool.name == "only_tool")
         #expect(tool.args == "{\"ready\":true}")
@@ -311,8 +317,7 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        // Decoder returns first encountered tool or text; here it should return the first tool call.
-        let tool = try #require(result.toolValue)
+        let tool = try #require(ChatResponse(chunks: result).tools.first)
         #expect(tool.name == "do_first")
     }
 
@@ -337,7 +342,7 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        let content = try #require(result.textValue)
+        let content = try #require(ChatResponse(chunks: result).text)
         #expect(content.contains("[AUDIO]"))
         #expect(content.contains("diagram"))
     }
@@ -481,17 +486,16 @@ struct RemoteResponsesClientUnitTests {
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
-        var chunks: [ChatCompletionChunk] = []
+        var texts: [String] = []
         for try await item in stream {
-            if case let .chatCompletionChunk(chunk) = item {
-                chunks.append(chunk)
+            if let text = item.textValue {
+                texts.append(text)
             }
         }
 
-        #expect(chunks.count == 2)
-        #expect(chunks[0].choices.first?.delta.content == "Hi")
-        #expect(chunks[1].choices.first?.delta.content == nil)
-        #expect(chunks[1].choices.first?.finishReason == "stop")
+        #expect(texts.count == 2)
+        #expect(texts[0] == "Hi")
+        #expect(texts[1].isEmpty)
     }
 
     @Test("Streaming emits done text when no deltas")
@@ -524,18 +528,16 @@ struct RemoteResponsesClientUnitTests {
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
-        var chunks: [ChatCompletionChunk] = []
+        var texts: [String] = []
         for try await item in stream {
-            if case let .chatCompletionChunk(chunk) = item {
-                chunks.append(chunk)
+            if let text = item.textValue {
+                texts.append(text)
             }
         }
 
-        #expect(chunks.count == 2)
-        #expect(chunks.first?.choices.first?.delta.content == "Hola")
-        #expect(chunks.first?.choices.first?.finishReason == nil)
-        #expect(chunks.last?.choices.first?.delta.content == nil)
-        #expect(chunks.last?.choices.first?.finishReason == "stop")
+        #expect(texts.count == 2)
+        #expect(texts.first == "Hola")
+        #expect(texts.last?.isEmpty == true)
     }
 
     @Test("Streaming emits error when response fails")
@@ -593,7 +595,7 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        let text = try #require(result.textValue)
+        let text = try #require(ChatResponse(chunks: result).text)
         #expect(text == "I cannot help with that.")
     }
 
@@ -613,7 +615,7 @@ struct RemoteResponsesClientUnitTests {
         let stopData = try JSONSerialization.data(withJSONObject: stopJSON)
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
         let stopResponse = try decoder.decodeResponse(from: stopData)
-        #expect(stopResponse.textValue == "Answer")
+        #expect(ChatResponse(chunks: stopResponse).text == "Answer")
 
         let toolJSON: [String: Any] = [
             "output": [
@@ -634,7 +636,7 @@ struct RemoteResponsesClientUnitTests {
         ]
         let toolData = try JSONSerialization.data(withJSONObject: toolJSON)
         let toolResponse = try decoder.decodeResponse(from: toolData)
-        #expect(toolResponse.toolValue?.name == "do_next")
+        #expect(ChatResponse(chunks: toolResponse).tools.first?.name == "do_next")
     }
 
     @Test("Streaming emits refusal content with refusal finish reason")
@@ -667,15 +669,15 @@ struct RemoteResponsesClientUnitTests {
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
-        var chunks: [ChatCompletionChunk] = []
+        var refusalText: String?
         for try await object in stream {
-            if case let .chatCompletionChunk(chunk) = object {
-                chunks.append(chunk)
+            if let text = object.textValue, !text.isEmpty {
+                refusalText = text
+                break
             }
         }
 
-        let refusalChunk = try #require(chunks.first)
-        #expect(refusalChunk.choices.first?.delta.content == "nope")
+        #expect(refusalText == "nope")
     }
 
     @Test("Streaming emits reasoning content from reasoning_text.done")
@@ -710,11 +712,9 @@ struct RemoteResponsesClientUnitTests {
 
         var reasoningContent: String?
         for try await item in stream {
-            if case let .chatCompletionChunk(chunk) = item {
-                if let reasoning = chunk.choices.first?.delta.reasoningContent, !reasoning.isEmpty {
-                    reasoningContent = reasoning
-                    break
-                }
+            if case let .reasoning(reasoning) = item, !reasoning.isEmpty {
+                reasoningContent = reasoning
+                break
             }
         }
 

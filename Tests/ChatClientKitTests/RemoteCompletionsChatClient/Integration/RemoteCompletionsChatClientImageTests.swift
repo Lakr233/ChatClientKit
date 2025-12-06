@@ -24,11 +24,10 @@ struct RemoteCompletionsChatClientImageTests {
             ])),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         #expect(content.isEmpty == false)
-        // The image is red, so the response should mention red
         #expect(content.lowercased().contains("red") == true)
     }
 
@@ -45,14 +44,12 @@ struct RemoteCompletionsChatClientImageTests {
             ])),
         ])
 
-        let stream = try await client.streamingChatCompletionRequest(body: request)
+        let stream = try await client.streamingChat(body: request)
 
         var fullContent = ""
         for try await chunk in stream {
-            if case let .chatCompletionChunk(completionChunk) = chunk {
-                if let content = completionChunk.choices.first?.delta.content {
-                    fullContent += content
-                }
+            if let content = chunk.textValue {
+                fullContent += content
             }
         }
 
@@ -73,8 +70,8 @@ struct RemoteCompletionsChatClientImageTests {
             temperature: 0.4,
         )
 
-        let response = try await client.chatCompletionRequest(body: request)
-        let imageData = response.imageData
+        let response: ChatResponse = try await client.chat(body: request)
+        let imageData = response.images.first?.data
 
         #expect(imageData != nil, "Expected image payload from google/gemini-2.5-flash-image")
         if imageData == nil {
@@ -95,9 +92,9 @@ struct RemoteCompletionsChatClientImageTests {
             ])),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         #expect(content.isEmpty == false)
     }
 
@@ -116,9 +113,9 @@ struct RemoteCompletionsChatClientImageTests {
             ])),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         #expect(content.isEmpty == false)
     }
 
@@ -135,9 +132,9 @@ struct RemoteCompletionsChatClientImageTests {
             ])),
         ])
 
-        let response = try await client.chatCompletionRequest(body: request)
+        let response: ChatResponse = try await client.chat(body: request)
 
-        let content = response.textValue ?? ""
+        let content = response.text
         #expect(content.isEmpty == false)
     }
 
@@ -156,14 +153,12 @@ struct RemoteCompletionsChatClientImageTests {
             .user(content: .text("What about the shape?")),
         ])
 
-        let stream = try await client.streamingChatCompletionRequest(body: request)
+        let stream = try await client.streamingChat(body: request)
 
         var fullContent = ""
         for try await chunk in stream {
-            if case let .chatCompletionChunk(completionChunk) = chunk {
-                if let content = completionChunk.choices.first?.delta.content {
-                    fullContent += content
-                }
+            if let content = chunk.textValue {
+                fullContent += content
             }
         }
 

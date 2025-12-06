@@ -18,7 +18,7 @@ struct RemoteResponsesChatClientLiveTests {
     func responsesAPIProducesContent() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
-        let response = try await client.responses {
+        let responseChunks = try await client.chatChunks {
             ChatRequest.model(TestHelpers.defaultOpenRouterModel)
             ChatRequest.messages {
                 ChatRequest.Message.system(content: .text("You answer with short sentences."))
@@ -27,7 +27,9 @@ struct RemoteResponsesChatClientLiveTests {
             ChatRequest.temperature(0.4)
         }
 
-        let content = response.textValue?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) ?? ""
+        let content = ChatResponse(chunks: responseChunks)
+            .text
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         #expect(!content.isEmpty, "Expected non-empty response content")
     }
 
@@ -38,7 +40,7 @@ struct RemoteResponsesChatClientLiveTests {
     func streamingResponsesAPIProducesChunks() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
-        let stream = try await client.streamingResponses {
+        let stream = try await client.streamingChat {
             ChatRequest.model(TestHelpers.defaultOpenRouterModel)
             ChatRequest.messages {
                 ChatRequest.Message.system(content: .text("You output poetic text."))
@@ -48,9 +50,7 @@ struct RemoteResponsesChatClientLiveTests {
 
         var collectedContent = ""
         for try await event in stream {
-            if case let .chatCompletionChunk(chunk) = event,
-               let delta = chunk.choices.first?.delta.content
-            {
+            if let delta = event.textValue {
                 collectedContent += delta
             }
         }
@@ -66,7 +66,7 @@ struct RemoteResponsesChatClientLiveTests {
     func responsesAPIHonorsDeveloperInstructions() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
-        let response = try await client.responses {
+        let responseChunks = try await client.chatChunks {
             ChatRequest.model(TestHelpers.defaultOpenRouterModel)
             ChatRequest.messages {
                 ChatRequest.Message.developer(content: .text("Always answer in uppercase letters."))
@@ -75,7 +75,7 @@ struct RemoteResponsesChatClientLiveTests {
             ChatRequest.temperature(0.2)
         }
 
-        let content = response.textValue ?? ""
+        let content = ChatResponse(chunks: responseChunks).text
         #expect(!content.isEmpty, "Expected non-empty content honoring developer instructions")
     }
 
@@ -86,7 +86,7 @@ struct RemoteResponsesChatClientLiveTests {
     func responsesAPIHandlesMultiTurnContext() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
-        let response = try await client.responses {
+        let responseChunks = try await client.chatChunks {
             ChatRequest.model("google/gemini-3-pro-preview")
             ChatRequest.messages {
                 ChatRequest.Message.user(content: .text("My name is Alice."))
@@ -96,7 +96,7 @@ struct RemoteResponsesChatClientLiveTests {
             ChatRequest.maxCompletionTokens(4096)
         }
 
-        let content = response.textValue ?? ""
+        let content = ChatResponse(chunks: responseChunks).text
         #expect(!content.isEmpty, "Response content missing for multi-turn request.")
         if !content.lowercased().contains("alice") {
             Issue.record("Model response did not echo the provided name. Content: \(content)")
