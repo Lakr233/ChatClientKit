@@ -27,12 +27,10 @@ struct ResponseIntegrationTests {
             ChatRequest.temperature(0.3)
         }
 
-        guard let content = response.textValue else {
+        guard let content = response.textValue, !content.isEmpty else {
             Issue.record("Response contained no message content.")
             return
         }
-
-        #expect(!content.isEmpty, "Expected OpenRouter responses content to be non-empty.")
     }
 
     @Test(

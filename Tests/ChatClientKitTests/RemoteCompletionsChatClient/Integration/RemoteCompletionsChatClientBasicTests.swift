@@ -103,7 +103,9 @@ struct RemoteCompletionsChatClientBasicTests {
         let response = try await client.chatCompletionRequest(body: request)
 
         let content = response.textValue ?? ""
-        #expect(content.isEmpty == false)
+        if content.isEmpty {
+            Issue.record("Expected non-empty completion when max tokens is set.")
+        }
     }
 
     @Test("Chat completion with max tokens", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))

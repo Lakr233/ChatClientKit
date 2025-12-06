@@ -8,23 +8,17 @@ import Foundation
 /// Chat completion request body. Docstrings are taken from this reference:
 /// https://platform.openai.com/docs/api-reference/chat/create
 public struct ChatRequestBody: Sendable, Encodable {
-    var model: String?
-
+    public internal(set) var model: String?
     public let messages: [Message]
-
     public let maxCompletionTokens: Int?
-
     public var stream: Bool?
-
     public let temperature: Double?
-
     public let tools: [Tool]?
 
     enum CodingKeys: String, CodingKey {
         // required
         case model
         case messages
-
         // optional
         case maxCompletionTokens = "max_completion_tokens"
         case stream

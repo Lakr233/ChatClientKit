@@ -35,9 +35,9 @@ public struct EventSource: Sendable {
         case closed
     }
 
-     let mode: Mode
+    let mode: Mode
 
-     let eventParser: @Sendable () -> EventParser
+    let eventParser: @Sendable () -> EventParser
 
     public var timeoutInterval: TimeInterval
 
@@ -71,7 +71,7 @@ public extension EventSource {
     /// ``EventSource/EventSource/dataTask(for:)`` method on the EventSource instance. After creating a task,
     /// it can be started by iterating event stream returned by ``DataTask/events()``.
     class DataTask: @unchecked Sendable {
-         let _readyState: Mutex<ReadyState> = Mutex(.none)
+        let _readyState: Mutex<ReadyState> = Mutex(.none)
 
         /// A value representing the state of the connection.
         public var readyState: ReadyState {
@@ -83,7 +83,7 @@ public extension EventSource {
             }
         }
 
-         let _lastMessageId: Mutex<String> = Mutex("")
+        let _lastMessageId: Mutex<String> = Mutex("")
 
         /// Last event's ID string value.
         ///
@@ -100,9 +100,9 @@ public extension EventSource {
         /// A URLRequest of the events source.
         public let urlRequest: URLRequest
 
-         let _eventParser: Mutex<EventParser>
+        let _eventParser: Mutex<EventParser>
 
-         var eventParser: EventParser {
+        var eventParser: EventParser {
             get {
                 _eventParser.withLock { $0 }
             }
@@ -111,11 +111,11 @@ public extension EventSource {
             }
         }
 
-         let timeoutInterval: TimeInterval
+        let timeoutInterval: TimeInterval
 
-         let _httpResponseErrorStatusCode: Mutex<Int?> = Mutex(nil)
+        let _httpResponseErrorStatusCode: Mutex<Int?> = Mutex(nil)
 
-         var httpResponseErrorStatusCode: Int? {
+        var httpResponseErrorStatusCode: Int? {
             get {
                 _httpResponseErrorStatusCode.withLock { $0 }
             }
@@ -124,9 +124,9 @@ public extension EventSource {
             }
         }
 
-         let _consumed: Mutex<Bool> = Mutex(false)
+        let _consumed: Mutex<Bool> = Mutex(false)
 
-         var consumed: Bool {
+        var consumed: Bool {
             get {
                 _consumed.withLock { $0 }
             }
@@ -135,7 +135,7 @@ public extension EventSource {
             }
         }
 
-         var urlSessionConfiguration: URLSessionConfiguration {
+        var urlSessionConfiguration: URLSessionConfiguration {
             let configuration = URLSessionConfiguration.default
             configuration.httpAdditionalHeaders = [
                 HTTPHeaderField.accept: Accept.eventStream,
@@ -207,7 +207,7 @@ public extension EventSource {
             }
         }
 
-         func handleSessionError(
+        func handleSessionError(
             _ error: Error?,
             stream continuation: AsyncStream<EventType>.Continuation,
             urlSession: URLSession,
@@ -226,7 +226,7 @@ public extension EventSource {
             close(stream: continuation, urlSession: urlSession)
         }
 
-         func handleSessionResponse(
+        func handleSessionResponse(
             _ response: URLResponse,
             stream continuation: AsyncStream<EventType>.Continuation,
             urlSession: URLSession,
@@ -263,7 +263,7 @@ public extension EventSource {
         /// Closes the connection, if one was made,
         /// and sets the `readyState` property to `.closed`.
         /// - Returns: State before closing.
-         func close(stream continuation: AsyncStream<EventType>.Continuation, urlSession: URLSession) {
+        func close(stream continuation: AsyncStream<EventType>.Continuation, urlSession: URLSession) {
             let previousState = readyState
             if previousState != .closed {
                 continuation.yield(.closed)
@@ -272,7 +272,7 @@ public extension EventSource {
             cancel(urlSession: urlSession)
         }
 
-         func parseMessages(
+        func parseMessages(
             from data: Data,
             stream continuation: AsyncStream<EventType>.Continuation,
             urlSession: URLSession,
@@ -299,12 +299,12 @@ public extension EventSource {
             }
         }
 
-         func setOpen(stream continuation: AsyncStream<EventType>.Continuation) {
+        func setOpen(stream continuation: AsyncStream<EventType>.Continuation) {
             readyState = .open
             continuation.yield(.open)
         }
 
-         func sendErrorEvent(with error: Error, stream continuation: AsyncStream<EventType>.Continuation) {
+        func sendErrorEvent(with error: Error, stream continuation: AsyncStream<EventType>.Continuation) {
             continuation.yield(.error(error))
         }
 

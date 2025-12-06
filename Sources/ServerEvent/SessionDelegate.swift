@@ -15,7 +15,7 @@ class SessionDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
         case didReceiveData(Data)
     }
 
-     let internalStream = AsyncStream<Event>.makeStream()
+    let internalStream = AsyncStream<Event>.makeStream()
 
     var eventStream: AsyncStream<Event> { internalStream.stream }
 

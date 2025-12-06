@@ -28,7 +28,10 @@ struct RemoteResponsesChatClientLiveTests {
         }
 
         let content = response.textValue?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) ?? ""
-        #expect(!content.isEmpty, "Expected non-empty response content")
+        if content.isEmpty {
+            Issue.record("Expected non-empty response content")
+            return
+        }
     }
 
     @Test(
@@ -56,7 +59,9 @@ struct RemoteResponsesChatClientLiveTests {
         }
 
         let normalized = collectedContent.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-        #expect(!normalized.isEmpty, "Expected streaming content to include text")
+        if normalized.isEmpty {
+            Issue.record("Expected streaming content to include text")
+        }
     }
 
     @Test(
@@ -76,7 +81,9 @@ struct RemoteResponsesChatClientLiveTests {
         }
 
         let content = response.textValue ?? ""
-        #expect(!content.isEmpty)
+        if content.isEmpty {
+            Issue.record("Expected non-empty content honoring developer instructions")
+        }
     }
 
     @Test(

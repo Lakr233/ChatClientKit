@@ -730,7 +730,7 @@ struct RemoteResponsesClientUnitTests {
 
 // MARK: - Test Doubles
 
- final class MockURLSession: URLSessioning, @unchecked Sendable {
+final class MockURLSession: URLSessioning, @unchecked Sendable {
     var result: Result<(Data, URLResponse), Swift.Error>
     private(set) var lastRequest: URLRequest?
 
@@ -744,7 +744,7 @@ struct RemoteResponsesClientUnitTests {
     }
 }
 
- final class MockEventSourceFactory: EventSourceProducing, @unchecked Sendable {
+final class MockEventSourceFactory: EventSourceProducing, @unchecked Sendable {
     var recordedEvents: [EventSource.EventType]
     private(set) var lastRequest: URLRequest?
 
@@ -758,7 +758,7 @@ struct RemoteResponsesClientUnitTests {
     }
 }
 
- struct MockEventStreamTask: EventStreamTask {
+struct MockEventStreamTask: EventStreamTask {
     let recordedEvents: [EventSource.EventType]
 
     func events() -> AsyncStream<EventSource.EventType> {
@@ -771,7 +771,7 @@ struct RemoteResponsesClientUnitTests {
     }
 }
 
- struct TestEvent: EVEvent {
+struct TestEvent: EVEvent {
     var id: String?
     var event: String?
     var data: String?
@@ -779,4 +779,4 @@ struct RemoteResponsesClientUnitTests {
     var time: String?
 }
 
- struct TestError: Swift.Error {}
+struct TestError: Swift.Error {}

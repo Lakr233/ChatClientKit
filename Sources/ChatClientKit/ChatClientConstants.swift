@@ -7,8 +7,8 @@
 
 import Foundation
 
-public enum ChatClientConstants {
-    public static let additionalTerminatingTokens = [
+public nonisolated enum ChatClientConstants {
+    public nonisolated(unsafe) static var additionalTerminatingTokens = [
         "<end_of_turn>",
     ]
 }

@@ -14,8 +14,8 @@ import Foundation
     @_staticExclusiveOnly
 #endif
 package struct Mutex<Value: ~Copyable>: ~Copyable {
-     let _lock = NSLock()
-     let _box: Box
+    let _lock = NSLock()
+    let _box: Box
 
     /// Initializes a value of this mutex with the given initial state.
     ///
@@ -24,7 +24,7 @@ package struct Mutex<Value: ~Copyable>: ~Copyable {
         _box = Box(initialValue)
     }
 
-     class Box {
+    class Box {
         var value: Value
         init(_ initialValue: consuming sending Value) {
             value = initialValue

@@ -67,13 +67,15 @@ struct RemoteCompletionsChatClientImageTests {
             messages: [.user(content: .text("Create a simple black and white line-art cat icon."))],
             maxCompletionTokens: nil,
             stream: false,
-            temperature: 0.4
+            temperature: 0.4,
         )
 
         let response = try await client.chatCompletionRequest(body: request)
         let imageData = response.imageData
 
-        #expect(imageData != nil)
+        if imageData == nil {
+            Issue.record("Expected image payload in response.")
+        }
     }
 
     @Test("Chat completion with image and text", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))

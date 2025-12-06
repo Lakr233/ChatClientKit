@@ -30,7 +30,7 @@ private extension ChatCompletionChunk.Choice.Delta.ToolCall {
             index: nil,
             id: id,
             type: "function",
-            function: .init(name: functionName, arguments: argumentsJSON)
+            function: .init(name: functionName, arguments: argumentsJSON),
         )
     }
 }

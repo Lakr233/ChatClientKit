@@ -109,7 +109,7 @@ enum TestHelpers {
         return url
     }
 
-     static func loadAPIKey(named name: String) -> String? {
+    static func loadAPIKey(named name: String) -> String? {
         if let value = ProcessInfo.processInfo.environment[name], !value.isEmpty {
             return value
         }

@@ -14,8 +14,8 @@ public protocol EventParser: Sendable {
 
 /// ``ServerEventParser`` is used to parse text data into ``ServerSentEvent``.
 struct ServerEventParser: EventParser {
-     let mode: EventSource.Mode
-     var buffer = Data()
+    let mode: EventSource.Mode
+    var buffer = Data()
 
     init(mode: EventSource.Mode = .default) {
         self.mode = mode
@@ -31,14 +31,14 @@ struct ServerEventParser: EventParser {
         return parseBuffer(for: separatedMessages)
     }
 
-     func parseBuffer(for rawMessages: [Data]) -> [EVEvent] {
+    func parseBuffer(for rawMessages: [Data]) -> [EVEvent] {
         // Parse data to ServerMessage model
         let messages: [ServerSentEvent] = rawMessages.compactMap { ServerSentEvent.parse(from: $0, mode: mode) }
 
         return messages
     }
 
-     func splitBuffer(for data: Data) -> (completeData: [Data], remainingData: Data) {
+    func splitBuffer(for data: Data) -> (completeData: [Data], remainingData: Data) {
         let separators: [[UInt8]] = [[Self.lf, Self.lf], [Self.cr, Self.lf, Self.cr, Self.lf]]
 
         // find last range of our separator, most likely to be fast enough
@@ -57,7 +57,7 @@ struct ServerEventParser: EventParser {
         return (cleanedMessages, data[remainingRange])
     }
 
-     func findLastSeparator(in data: Data, separators: [[UInt8]]) -> ([UInt8]?, Range<Data.Index>?) {
+    func findLastSeparator(in data: Data, separators: [[UInt8]]) -> ([UInt8]?, Range<Data.Index>?) {
         var chosenSeparator: [UInt8]?
         var lastSeparatorRange: Range<Data.Index>?
         for separator in separators {
@@ -71,7 +71,7 @@ struct ServerEventParser: EventParser {
         return (chosenSeparator, lastSeparatorRange)
     }
 
-     func cleanMessageData(_ messageData: Data) -> Data {
+    func cleanMessageData(_ messageData: Data) -> Data {
         var cleanData = messageData
 
         // remove trailing CR/LF characters from the end
