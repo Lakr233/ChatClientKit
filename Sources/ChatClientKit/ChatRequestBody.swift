@@ -1,18 +1,16 @@
 import Foundation
 
 public struct ChatRequestBody: Sendable, Encodable {
-    public internal(set) var model: String?
-    public let messages: [Message]
-    public let maxCompletionTokens: Int?
+    public var model: String?
+    public var messages: [Message]
+    public var maxCompletionTokens: Int?
     public var stream: Bool?
-    public let temperature: Double?
-    public let tools: [Tool]?
+    public var temperature: Double?
+    public var tools: [Tool]?
 
     enum CodingKeys: String, CodingKey {
-        // required
         case model
         case messages
-        // optional
         case maxCompletionTokens = "max_completion_tokens"
         case stream
         case temperature
@@ -20,13 +18,14 @@ public struct ChatRequestBody: Sendable, Encodable {
     }
 
     public init(
-        messages: [Message],
+        model: String? = nil,
+        messages: [Message] = [],
         maxCompletionTokens: Int? = nil,
         stream: Bool? = nil,
         temperature: Double? = nil,
         tools: [Tool]? = nil,
     ) {
-        model = nil
+        self.model = model
         self.messages = messages
         self.maxCompletionTokens = maxCompletionTokens
         self.stream = stream

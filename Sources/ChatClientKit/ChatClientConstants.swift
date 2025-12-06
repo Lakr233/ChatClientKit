@@ -11,4 +11,6 @@ public nonisolated enum ChatClientConstants {
     public nonisolated(unsafe) static var additionalTerminatingTokens = [
         "<end_of_turn>",
     ]
+    public static let reasoningDecoderBegin: String = "<think>"
+    public static let reasoningDecoderEnd: String = "</think>"
 }

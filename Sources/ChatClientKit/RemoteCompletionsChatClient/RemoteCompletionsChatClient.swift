@@ -89,27 +89,6 @@ public final class RemoteCompletionsChatClient: ChatService {
         }
     }
 
-    public func streamingChatCompletionRequest(
-        _ request: some ChatRequestConvertible,
-    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
-        try await streamingChat(body: request.asChatRequestBody())
-    }
-
-    /// Executes a chat completion using the Swift request DSL.
-    public func chatCompletion(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
-    ) async throws -> [ChatResponseChunk] {
-        try await chat(body: ChatRequest(builder).asChatRequestBody())
-    }
-
-    public func makeURLRequest(
-        from request: some ChatRequestConvertible,
-        stream: Bool,
-    ) throws -> URLRequest {
-        let body = try resolve(body: request.asChatRequestBody(), stream: stream)
-        return try makeURLRequest(body: body)
-    }
-
     func makeRequestBuilder() -> RemoteCompletionsChatRequestBuilder {
         RemoteCompletionsChatRequestBuilder(
             baseURL: baseURL,

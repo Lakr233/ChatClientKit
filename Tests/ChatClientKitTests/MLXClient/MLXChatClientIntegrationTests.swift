@@ -17,19 +17,19 @@ struct MLXChatClientIntegrationTests {
         let modelURL = TestHelpers.fixtureURLOrSkip(named: "mlx_testing_model")
         let client = MLXChatClient(url: modelURL)
 
-        let response = try await client.chatCompletionRequest(
-            body: .init(
+        let responseChunks = try await client.chatCompletionRequest(
+            ChatRequestBody(
                 messages: [
                     .system(content: .text("Respond succinctly with HELLO.")),
                     .user(content: .text("Say HELLO")),
                 ],
                 maxCompletionTokens: 32,
-                temperature: 0.0,
-            ),
+                temperature: 0.0
+            )
         )
 
-        let content = response.textValue?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let content = ChatResponse(chunks: responseChunks).text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
 
         #expect(!content.isEmpty)
     }

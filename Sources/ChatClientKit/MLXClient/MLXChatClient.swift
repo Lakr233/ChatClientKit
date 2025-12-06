@@ -40,29 +40,4 @@ public class MLXChatClient: ChatService, @unchecked Sendable {
         }
     }
 
-    func chatCompletionRequest(
-        _ request: some ChatRequestConvertible,
-    ) async throws -> [ChatResponseChunk] {
-        try await chat(body: request.asChatRequestBody())
-    }
-
-    func streamingChatCompletionRequest(
-        _ request: some ChatRequestConvertible,
-    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
-        try await streamingChat(body: request.asChatRequestBody())
-    }
-
-    /// Executes a local MLX completion using the Swift request DSL.
-    func chatCompletion(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
-    ) async throws -> [ChatResponseChunk] {
-        try await chatCompletionRequest(ChatRequest(builder))
-    }
-
-    /// Streams a local MLX completion using the Swift request DSL.
-    func streamingChatCompletion(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
-    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
-        try await streamingChatCompletionRequest(ChatRequest(builder))
-    }
 }

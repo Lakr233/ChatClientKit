@@ -18,7 +18,7 @@ struct ResponseIntegrationTests {
     func responsesRequestReturnsContent() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
-        let response = try await client.responses {
+        let responseChunks = try await client.responses {
             ChatRequest.model(TestHelpers.defaultOpenRouterModel)
             ChatRequest.messages {
                 ChatRequest.Message.system(content: .text("You are a concise assistant."))
@@ -27,7 +27,8 @@ struct ResponseIntegrationTests {
             ChatRequest.temperature(0.3)
         }
 
-        let content = response.textValue ?? ""
+        let content = ChatResponse(chunks: responseChunks).text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         #expect(!content.isEmpty, "Expected OpenRouter responses content to be non-empty.")
     }
 
@@ -47,15 +48,13 @@ struct ResponseIntegrationTests {
         }
 
         var collected = ""
-        for try await object in stream {
-            if case let .chatCompletionChunk(chunk) = object,
-               let delta = chunk.choices.first?.delta.content
-            {
+        for try await chunk in stream {
+            if case let .text(delta) = chunk {
                 collected += delta
             }
         }
 
-        let normalized = collected.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        let normalized = collected.trimmingCharacters(in: .whitespacesAndNewlines)
         #expect(!normalized.isEmpty, "Expected streaming response to include text.")
     }
 }

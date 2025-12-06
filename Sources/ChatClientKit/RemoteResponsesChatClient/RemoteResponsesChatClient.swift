@@ -88,42 +88,6 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
         }
     }
 
-    public func streamingChatCompletionsRequest(
-        _ request: some ChatRequestConvertible,
-    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
-        try await streamingChat(body: request.asChatRequestBody())
-    }
-
-    public func responses(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
-    ) async throws -> [ChatResponseChunk] {
-        try await chat(body: ChatRequest(builder).asChatRequestBody())
-    }
-
-    public func streamingResponses(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
-    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
-        try await streamingChat(body: ChatRequest(builder).asChatRequestBody())
-    }
-
-    // Compatibility helpers mirroring the naming of other clients.
-    public func responsesRequest(body: ChatRequestBody) async throws -> [ChatResponseChunk] {
-        try await chat(body: body)
-    }
-
-    public func streamingResponsesRequest(
-        body: ChatRequestBody,
-    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
-        try await streamingChat(body: body)
-    }
-
-    public func makeURLRequest(
-        from request: some ChatRequestConvertible,
-        stream: Bool,
-    ) throws -> URLRequest {
-        let body = try resolve(body: request.asChatRequestBody(), stream: stream)
-        return try makeURLRequest(body: body)
-    }
 }
 
 extension RemoteResponsesChatClient {

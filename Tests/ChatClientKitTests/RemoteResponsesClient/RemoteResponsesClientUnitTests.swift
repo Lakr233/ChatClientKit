@@ -237,14 +237,16 @@ struct RemoteResponsesClientUnitTests {
             dependencies: dependencies,
         )
 
-        let result = try await client.responsesRequest(body: .init(messages: [.user(content: .text("hi"))]))
+        let chunks: [ChatResponseChunk] = try await client.chat(
+            body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
+        )
+        let response = ChatResponse(chunks: chunks)
 
-        if let tool = result.toolValue {
+        if let tool = response.tools.first {
             #expect(tool.name == "do_thing")
             #expect(tool.args == "{\"value\":42}")
         } else {
-            let text = try #require(result.textValue)
-            #expect(text == "Answer")
+            #expect(response.text == "Answer")
         }
     }
 
@@ -384,7 +386,7 @@ struct RemoteResponsesClientUnitTests {
             dependencies: dependencies,
         )
 
-        let stream = try await client.streamingResponsesRequest(
+        let stream = try await client.streamingChat(
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
@@ -434,7 +436,7 @@ struct RemoteResponsesClientUnitTests {
             dependencies: dependencies,
         )
 
-        let stream = try await client.streamingResponsesRequest(
+        let stream = try await client.streamingChat(
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
@@ -475,7 +477,7 @@ struct RemoteResponsesClientUnitTests {
             dependencies: dependencies,
         )
 
-        let stream = try await client.streamingResponsesRequest(
+        let stream = try await client.streamingChat(
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
@@ -518,7 +520,7 @@ struct RemoteResponsesClientUnitTests {
             dependencies: dependencies,
         )
 
-        let stream = try await client.streamingResponsesRequest(
+        let stream = try await client.streamingChat(
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
@@ -561,7 +563,7 @@ struct RemoteResponsesClientUnitTests {
             dependencies: dependencies,
         )
 
-        let stream = try await client.streamingResponsesRequest(
+        let stream = try await client.streamingChat(
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
@@ -661,7 +663,7 @@ struct RemoteResponsesClientUnitTests {
             dependencies: dependencies,
         )
 
-        let stream = try await client.streamingResponsesRequest(
+        let stream = try await client.streamingChat(
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 
@@ -702,7 +704,7 @@ struct RemoteResponsesClientUnitTests {
             dependencies: dependencies,
         )
 
-        let stream = try await client.streamingResponsesRequest(
+        let stream = try await client.streamingChat(
             body: ChatRequestBody(messages: [.user(content: .text("hi"))]),
         )
 

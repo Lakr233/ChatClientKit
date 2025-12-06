@@ -168,12 +168,12 @@ struct ChunkDecoder {
     func toggleReasoningIfNeeded(lastToken: Int?, isReasoning: inout Bool) -> Bool {
         guard let lastToken else { return false }
         let text = context.tokenizer.decode(tokens: [lastToken]).trimmingCharacters(in: .whitespacesAndNewlines)
-        if !isReasoning, text == REASONING_START_TOKEN {
+        if !isReasoning, text == ChatClientConstants.reasoningDecoderBegin {
             logger.info("starting reasoning with token \(text)")
             isReasoning = true
             return true
         }
-        if isReasoning, text == REASONING_END_TOKEN {
+        if isReasoning, text == ChatClientConstants.reasoningDecoderEnd {
             logger.info("end reasoning with token \(text)")
             isReasoning = false
             return true

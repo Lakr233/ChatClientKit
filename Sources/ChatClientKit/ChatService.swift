@@ -30,7 +30,30 @@ public extension ChatService {
         }
         return chunks
     }
-}
 
-let REASONING_START_TOKEN: String = "<think>"
-let REASONING_END_TOKEN: String = "</think>"
+    // MARK: - Convenience entry points
+
+    func chat(_ request: some ChatRequestConvertible) async throws -> ChatResponse {
+        try await chat(body: request.asChatRequestBody())
+    }
+
+    func chat(_ request: some ChatRequestConvertible) async throws -> [ChatResponseChunk] {
+        try await chat(body: request.asChatRequestBody())
+    }
+
+    func streamingChat(_ request: some ChatRequestConvertible) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        try await streamingChat(body: request.asChatRequestBody())
+    }
+
+    func chat(
+        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent]
+    ) async throws -> [ChatResponseChunk] {
+        try await chat(ChatRequest(builder))
+    }
+
+    func streamingChat(
+        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent]
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        try await streamingChat(ChatRequest(builder))
+    }
+}

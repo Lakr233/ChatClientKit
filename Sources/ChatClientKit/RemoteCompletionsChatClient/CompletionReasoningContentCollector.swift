@@ -11,7 +11,7 @@ struct CompletionReasoningContentCollector: Sendable {
     let startToken: String
     let endToken: String
 
-    init(startToken: String = REASONING_START_TOKEN, endToken: String = REASONING_END_TOKEN) {
+    init(startToken: String = ChatClientConstants.reasoningDecoderBegin, endToken: String = ChatClientConstants.reasoningDecoderEnd) {
         self.startToken = startToken
         self.endToken = endToken
     }

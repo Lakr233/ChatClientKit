@@ -248,18 +248,3 @@ enum TestHelpers {
     }
 }
 
-// MARK: - ChatResponseBody helpers (tests only)
-
-extension ChatResponseBodyChunk {
-    var textValue: String? {
-        if case let .text(value) = self { value } else { nil }
-    }
-
-    var imageData: Data? {
-        if case let .image(content) = self { content.data } else { nil }
-    }
-
-    var toolCall: ToolRequest? {
-        if case let .tool(call) = self { call } else { nil }
-    }
-}
