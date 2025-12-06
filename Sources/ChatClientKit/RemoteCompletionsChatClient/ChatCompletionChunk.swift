@@ -9,20 +9,15 @@ public extension ChatCompletionChunk {
     struct Choice: Sendable, Decodable {
         public let delta: Delta
 
-        /// Reason the model stopped generating tokens.
-        public let finishReason: String?
-
         public let index: Int?
 
         enum CodingKeys: String, CodingKey {
             case delta
-            case finishReason = "finish_reason"
             case index
         }
 
-        public init(delta: Delta, finishReason: String? = nil, index: Int? = nil) {
+        public init(delta: Delta, index: Int? = nil) {
             self.delta = delta
-            self.finishReason = finishReason
             self.index = index
         }
     }
@@ -35,7 +30,7 @@ public extension ChatCompletionChunk.Choice {
         public let reasoningContent: String?
         public let role: String?
         public let toolCalls: [ToolCall]?
-        public let images: [CompletionImageCollector]?
+        public let images: [CompletionImage]?
 
         enum CodingKeys: String, CodingKey {
             case content
@@ -43,7 +38,7 @@ public extension ChatCompletionChunk.Choice {
             case reasoningContent = "reasoning_content"
             case role
             case toolCalls = "tool_calls"
-            case images = "image"
+            case images
         }
 
         public init(
@@ -52,7 +47,7 @@ public extension ChatCompletionChunk.Choice {
             reasoningContent: String? = nil,
             role: String? = nil,
             toolCalls: [ToolCall]? = nil,
-            images: [CompletionImageCollector]? = nil,
+            images: [CompletionImage]? = nil,
         ) {
             self.content = content
             self.reasoning = reasoning
@@ -67,11 +62,8 @@ public extension ChatCompletionChunk.Choice {
 public extension ChatCompletionChunk.Choice.Delta {
     struct ToolCall: Sendable, Decodable {
         public let index: Int?
-
         public let id: String?
-
         public let type: String?
-
         public let function: Function?
     }
 }
@@ -79,7 +71,6 @@ public extension ChatCompletionChunk.Choice.Delta {
 public extension ChatCompletionChunk.Choice.Delta.ToolCall {
     struct Function: Sendable, Decodable {
         public let name: String?
-
         public let arguments: String?
     }
 }

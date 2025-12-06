@@ -23,7 +23,7 @@ public final class RemoteCompletionsChatClient: ChatService {
     let responseDecoderFactory: @Sendable () -> JSONDecoding
     let chunkDecoderFactory: @Sendable () -> JSONDecoding
     let errorExtractor: RemoteCompletionsChatErrorExtractor
-    let reasoningParser: CompletionReasoningContentCollector
+    let reasoningParser: CompletionReasoningDecoder
     let requestSanitizer: RequestSanitizing
 
     public convenience init(

@@ -12,13 +12,13 @@ struct RemoteCompletionsChatStreamProcessor {
     let eventSourceFactory: EventSourceProducing
     let chunkDecoder: JSONDecoding
     let errorExtractor: RemoteCompletionsChatErrorExtractor
-    let reasoningParser: CompletionReasoningContentCollector
+    let reasoningParser: CompletionReasoningDecoder
 
     init(
         eventSourceFactory: EventSourceProducing = DefaultEventSourceFactory(),
         chunkDecoder: JSONDecoding = JSONDecoderWrapper(),
         errorExtractor: RemoteCompletionsChatErrorExtractor = RemoteCompletionsChatErrorExtractor(),
-        reasoningParser: CompletionReasoningContentCollector = .init(),
+        reasoningParser: CompletionReasoningDecoder = .init(),
     ) {
         self.eventSourceFactory = eventSourceFactory
         self.chunkDecoder = chunkDecoder
@@ -98,6 +98,13 @@ struct RemoteCompletionsChatStreamProcessor {
                                 if let content = choice.delta.content {
                                     continuation.yield(.text(content))
                                 }
+                                if let images = choice.delta.images {
+                                    for image in images {
+                                        if let parsed = parseDataURL(image.imageURL.url) {
+                                            continuation.yield(.image(.init(data: parsed.data, mimeType: parsed.mimeType)))
+                                        }
+                                    }
+                                }
                             }
                         } catch {
                             if let text = String(data: data, encoding: .utf8) {
@@ -135,4 +142,17 @@ struct RemoteCompletionsChatStreamProcessor {
         }
         return stream.eraseToAnyAsyncSequence()
     }
+}
+
+private func parseDataURL(_ text: String) -> (data: Data, mimeType: String?)? {
+    guard text.lowercased().hasPrefix("data:") else { return nil }
+    let parts = text.split(separator: ",", maxSplits: 1).map(String.init)
+    guard parts.count == 2 else { return nil }
+    let header = parts[0] // data:image/png;base64
+    let body = parts[1]
+    let mimeType = header
+        .replacingOccurrences(of: "data:", with: "")
+        .replacingOccurrences(of: ";base64", with: "")
+    guard let decoded = Data(base64Encoded: body) else { return nil }
+    return (decoded, mimeType.isEmpty ? nil : mimeType)
 }

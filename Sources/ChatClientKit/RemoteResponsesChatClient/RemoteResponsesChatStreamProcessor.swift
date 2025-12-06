@@ -145,7 +145,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: delta,
-                finishReason: nil,
             )
         case .outputTextDone:
             let content = resolvedFinalText(from: payload, streamedTextItemIDs: &streamedTextItemIDs)
@@ -154,7 +153,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: content,
-                finishReason: nil,
             )
         case .reasoningTextDelta:
             guard let delta = payload.delta else { return nil }
@@ -162,14 +160,12 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 reasoning: delta,
-                finishReason: nil,
             )
         case .reasoningTextDone:
             return makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 reasoning: payload.text ?? payload.delta,
-                finishReason: nil,
             )
         case .refusalDelta:
             guard let delta = payload.delta else { return nil }
@@ -177,7 +173,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: delta,
-                finishReason: nil,
             )
         case .refusalDone:
             guard !finishEmitted else { return nil }
@@ -186,7 +181,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: payload.refusal ?? payload.text ?? payload.delta,
-                finishReason: finishReason(for: payload.kind, hasToolCalls: toolCollector.hasPendingRequests),
             )
         case .functionCallArgumentsDelta:
             toolCollector.appendDelta(
@@ -222,7 +216,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: nil,
-                finishReason: finishReason(for: payload.kind, hasToolCalls: toolCollector.hasPendingRequests),
             )
         case .reasoningSummaryTextDelta:
             guard let delta = payload.delta else { return nil }
@@ -230,7 +223,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 reasoning: delta,
-                finishReason: nil,
             )
         case .reasoningSummaryTextDone:
             guard !finishEmitted else { return nil }
@@ -239,7 +231,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 reasoning: payload.text,
-                finishReason: finishReason(for: payload.kind, hasToolCalls: toolCollector.hasPendingRequests),
             )
         case .responseCompleted:
             guard !finishEmitted else { return nil }
@@ -248,7 +239,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: nil,
-                finishReason: finishReason(for: payload.kind, hasToolCalls: toolCollector.hasPendingRequests),
             )
         case .responseFailed:
             finishEmitted = true
@@ -260,7 +250,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: nil,
-                finishReason: finishReason(for: payload.kind, hasToolCalls: toolCollector.hasPendingRequests),
             )
         case .error:
             return nil
@@ -278,7 +267,6 @@ extension RemoteResponsesChatStreamProcessor {
                 payload: payload,
                 outputMetadata: outputMetadata,
                 reasoning: payload.part?.text ?? payload.text,
-                finishReason: nil,
             )
         }
     }
@@ -288,7 +276,6 @@ extension RemoteResponsesChatStreamProcessor {
         outputMetadata: [String: OutputItemMetadata],
         content: String? = nil,
         reasoning: String? = nil,
-        finishReason: String?,
     ) -> ChatCompletionChunk {
         let role = payload.itemID.flatMap { outputMetadata[$0]?.role } ?? "assistant"
         let choice = ChatCompletionChunk.Choice(
@@ -297,7 +284,6 @@ extension RemoteResponsesChatStreamProcessor {
                 reasoningContent: reasoning,
                 role: role,
             ),
-            finishReason: finishReason,
             index: payload.outputIndex,
         )
         return ChatCompletionChunk(choices: [choice])
@@ -314,28 +300,6 @@ extension RemoteResponsesChatStreamProcessor {
         }
         streamedTextItemIDs.insert(itemID)
         return text
-    }
-
-    func finishReason(for kind: ResponsesStreamEvent.Kind, hasToolCalls: Bool) -> String? {
-        let stopOrTool = hasToolCalls ? "tool_calls" : "stop"
-        switch kind {
-        case .refusalDone:
-            return "refusal"
-        case .responseIncomplete:
-            return "length"
-        case .responseCompleted:
-            return stopOrTool
-        case .outputItemDone:
-            return stopOrTool
-        case .reasoningSummaryTextDone:
-            return stopOrTool
-        case .reasoningSummaryPartDone:
-            return stopOrTool
-        case .outputTextDone:
-            return stopOrTool
-        default:
-            return "stop"
-        }
     }
 }
 

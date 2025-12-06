@@ -56,6 +56,46 @@ struct RemoteCompletionsChatClientImageTests {
         #expect(fullContent.isEmpty == false)
     }
 
+    @Test("Image generation did decode image payload")
+    func imageGenerationDecodesImage() async throws {
+        let object = """
+        {
+            "id": "gen-1765022540-E8rFudi6QOQq2QjD1dJ7",
+            "provider": "Google AI Studio",
+            "model": "google/gemini-2.5-flash-image",
+            "object": "chat.completion.chunk",
+            "created": 1765022540,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "role": "assistant",
+                        "content": "",
+                        "images": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": "data:image/png;base64,+DxxxxxJRU5ErkJggg=="
+                                },
+                                "index": 0
+                            }
+                        ]
+                    },
+                    "logprobs": null
+                }
+            ]
+        }
+        """
+        let data = object.data(using: .utf8)!
+        do {
+            let chunk = try JSONDecoder().decode(ChatCompletionChunk.self, from: data)
+            let url = chunk.choices.first?.delta.images?.first?.imageURL
+            #expect(url != nil, "Expected to decode image data from image generation payload")
+        } catch {
+            Issue.record("Failed to decode image generation payload: \(error.localizedDescription)")
+        }
+    }
+
     @Test("Image generation returns image payload", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
     func imageGenerationProducesImage() async throws {
         let client = TestHelpers.makeOpenRouterImageClient()

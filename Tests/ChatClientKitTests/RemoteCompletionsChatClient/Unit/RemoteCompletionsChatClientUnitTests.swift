@@ -41,7 +41,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: CompletionReasoningContentCollector(),
+            reasoningParser: CompletionReasoningDecoder(),
             requestSanitizer: RequestSanitizer(),
         )
 
@@ -87,7 +87,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: CompletionReasoningContentCollector(),
+            reasoningParser: CompletionReasoningDecoder(),
             requestSanitizer: RequestSanitizer(),
         )
 
@@ -135,7 +135,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: CompletionReasoningContentCollector(),
+            reasoningParser: CompletionReasoningDecoder(),
             requestSanitizer: RequestSanitizer(),
         )
 
@@ -187,7 +187,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: CompletionReasoningContentCollector(),
+            reasoningParser: CompletionReasoningDecoder(),
             requestSanitizer: RequestSanitizer(),
         )
 
@@ -204,8 +204,8 @@ struct RemoteCompletionsChatClientUnitTests {
         ])
 
         do {
-            _ = try await client.chat(body: request)
-            Issue.record("Expected error to be thrown")
+            let response = try await client.chat(body: request)
+            Issue.record("Expected error to be thrown: \(response)")
         } catch {
             // Expected error
             #expect(error.localizedDescription.contains("Invalid API key"))
@@ -235,7 +235,7 @@ struct RemoteCompletionsChatClientUnitTests {
             responseDecoderFactory: { JSONDecoderWrapper() },
             chunkDecoderFactory: { JSONDecoderWrapper() },
             errorExtractor: RemoteChatErrorExtractor(),
-            reasoningParser: CompletionReasoningContentCollector(),
+            reasoningParser: CompletionReasoningDecoder(),
             requestSanitizer: RequestSanitizer(),
         )
 

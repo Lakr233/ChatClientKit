@@ -10,7 +10,7 @@ struct RemoteCompletionsChatResponseDecoder {
     }
 
     func decodeResponse(from data: Data) throws -> [ChatResponseChunk] {
-        let payload = try decoder.decode(ProviderResponse.self, from: data)
+        let payload = try decoder.decode(CompletionsResponse.self, from: data)
         guard let choice = payload.choices?.first, let message = choice.message else {
             return [.text("")]
         }
@@ -23,8 +23,7 @@ struct RemoteCompletionsChatResponseDecoder {
 
         if let images = message.images,
            let first = images.first,
-           let urlString = first.imageURL?.url,
-           let parsed = parseDataURL(urlString)
+           let parsed = parseDataURL(first.imageURL.url)
         {
             return [.image(ImageContent(data: parsed.data, mimeType: parsed.mimeType))]
         }
@@ -34,54 +33,29 @@ struct RemoteCompletionsChatResponseDecoder {
     }
 }
 
-// MARK: - Provider DTOs
+// MARK: - Completions DTOs
 
-struct ProviderResponse: Decodable {
-    let choices: [Choice]?
+struct CompletionsResponse: Decodable {
+    let choices: [CompletionsChoice]?
 }
 
-struct Choice: Decodable {
-    let message: Message?
-    let finishReason: String?
+struct CompletionsChoice: Decodable {
+    let message: CompletionsMessage?
 
     enum CodingKeys: String, CodingKey {
         case message
-        case finishReason = "finish_reason"
     }
 }
 
-struct Message: Decodable {
+struct CompletionsMessage: Decodable {
     let content: String?
-    let role: String?
-    let toolCalls: [ToolCall]?
-    let images: [CompletionImageCollector]?
+    let toolCalls: [ChatCompletionChunk.Choice.Delta.ToolCall]?
+    let images: [CompletionImage]?
 
     private enum CodingKeys: String, CodingKey {
         case content
-        case role
         case toolCalls = "tool_calls"
         case images // Expected for providers like google/gemini-2.5-flash-image
-    }
-}
-
-struct ToolCall: Decodable {
-    let id: String?
-    let type: String?
-    let function: Function?
-}
-
-struct Function: Decodable {
-    let name: String?
-    let arguments: String?
-}
-
-struct ImageURL: Decodable {
-    let url: String?
-    let mimeType: String?
-
-    enum CodingKeys: String, CodingKey {
-        case url
-        case mimeType = "mime_type"
     }
 }
 

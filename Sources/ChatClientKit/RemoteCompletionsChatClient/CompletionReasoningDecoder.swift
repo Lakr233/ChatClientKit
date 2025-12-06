@@ -1,5 +1,5 @@
 //
-//  CompletionReasoningContentCollector.swift
+//  CompletionReasoningDecoder.swift
 //  ChatClientKit
 //
 //  Created by GPT-5 Codex on 2025/11/10.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct CompletionReasoningContentCollector: Sendable {
+struct CompletionReasoningDecoder: Sendable {
     let startToken: String
     let endToken: String
 
@@ -49,11 +49,11 @@ struct CompletionReasoningContentCollector: Sendable {
 }
 
 struct ReasoningStreamReducer: Sendable {
-    let parser: CompletionReasoningContentCollector
+    let parser: CompletionReasoningDecoder
     var isInsideReasoningContent = false
     var contentBuffer = ""
 
-    init(parser: CompletionReasoningContentCollector) {
+    init(parser: CompletionReasoningDecoder) {
         self.parser = parser
     }
 
@@ -126,7 +126,7 @@ struct ReasoningStreamReducer: Sendable {
 }
 
 func reduceReasoningContent(
-    parser: CompletionReasoningContentCollector,
+    parser: CompletionReasoningDecoder,
     content: [String],
     reasoningContent: [String],
     isInsideReasoning: inout Bool,
@@ -228,7 +228,6 @@ func reduceReasoningContent(
             )
             updatedChoices[0] = .init(
                 delta: updatedDelta,
-                finishReason: firstChoice.finishReason,
                 index: firstChoice.index,
             )
             response = .init(choices: updatedChoices)
