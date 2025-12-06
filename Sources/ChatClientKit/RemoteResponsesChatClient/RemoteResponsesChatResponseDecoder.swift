@@ -123,13 +123,12 @@ struct ResponsesOutputItem: Decodable {
             role: role ?? "assistant",
             toolCalls: toolCalls.isEmpty ? nil : toolCalls,
         )
-        let finishReason: String?
-        if hasRefusal {
-            finishReason = "refusal"
+        let finishReason: String? = if hasRefusal {
+            "refusal"
         } else if hasToolCalls {
-            finishReason = "tool_calls"
+            "tool_calls"
         } else {
-            finishReason = "stop"
+            "stop"
         }
         return ChatChoice(finishReason: finishReason, message: message)
     }
@@ -208,7 +207,7 @@ private extension ChatChoice {
             reasoningContent: message.reasoningContent,
             reasoningDetails: message.reasoningDetails,
             role: message.role,
-            toolCalls: mergedToolCalls
+            toolCalls: mergedToolCalls,
         )
         return ChatChoice(finishReason: finish, message: updatedMessage)
     }

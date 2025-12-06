@@ -38,7 +38,7 @@ public final class RemoteResponsesChatClient: ChatService {
         path: String? = nil,
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
-        additionalBodyField: [String: Any] = [:]
+        additionalBodyField: [String: Any] = [:],
     ) {
         self.init(
             model: model,
@@ -47,7 +47,7 @@ public final class RemoteResponsesChatClient: ChatService {
             apiKey: apiKey,
             additionalHeaders: additionalHeaders,
             additionalBodyField: additionalBodyField,
-            dependencies: .live
+            dependencies: .live,
         )
     }
 
@@ -58,7 +58,7 @@ public final class RemoteResponsesChatClient: ChatService {
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
         additionalBodyField: [String: Any] = [:],
-        dependencies: RemoteResponsesClientDependencies
+        dependencies: RemoteResponsesClientDependencies,
     ) {
         self.model = model
         self.baseURL = baseURL
@@ -98,7 +98,7 @@ public final class RemoteResponsesChatClient: ChatService {
     }
 
     public func streamingChatCompletionRequest(
-        body: ChatRequestBody
+        body: ChatRequestBody,
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         let requestBody = resolve(body: body, stream: true)
         let request = try makeURLRequest(body: requestBody)
@@ -108,7 +108,7 @@ public final class RemoteResponsesChatClient: ChatService {
         let processor = RemoteResponsesChatStreamProcessor(
             eventSourceFactory: eventSourceFactory,
             chunkDecoder: chunkDecoderFactory(),
-            errorExtractor: errorExtractor
+            errorExtractor: errorExtractor,
         )
 
         return processor.stream(request: request) { [weak self] error in
@@ -117,25 +117,25 @@ public final class RemoteResponsesChatClient: ChatService {
     }
 
     public func chatCompletionsRequest(
-        _ request: some ChatRequestConvertible
+        _ request: some ChatRequestConvertible,
     ) async throws -> ChatResponseBody {
         try await chatCompletionRequest(body: request.asChatRequestBody())
     }
 
     public func streamingChatCompletionsRequest(
-        _ request: some ChatRequestConvertible
+        _ request: some ChatRequestConvertible,
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         try await streamingChatCompletionRequest(body: request.asChatRequestBody())
     }
 
     public func responses(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent]
+        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
     ) async throws -> ChatResponseBody {
         try await chatCompletionsRequest(ChatRequest(builder))
     }
 
     public func streamingResponses(
-        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent]
+        @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent],
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         try await streamingChatCompletionsRequest(ChatRequest(builder))
     }
@@ -146,14 +146,14 @@ public final class RemoteResponsesChatClient: ChatService {
     }
 
     public func streamingResponsesRequest(
-        body: ChatRequestBody
+        body: ChatRequestBody,
     ) async throws -> AnyAsyncSequence<ChatServiceStreamObject> {
         try await streamingChatCompletionRequest(body: body)
     }
 
     public func makeURLRequest(
         from request: some ChatRequestConvertible,
-        stream: Bool
+        stream: Bool,
     ) throws -> URLRequest {
         let body = try resolve(body: request.asChatRequestBody(), stream: stream)
         return try makeURLRequest(body: body)
@@ -166,7 +166,7 @@ private extension RemoteResponsesChatClient {
             baseURL: baseURL,
             path: path,
             apiKey: apiKey,
-            additionalHeaders: additionalHeaders
+            additionalHeaders: additionalHeaders,
         )
     }
 

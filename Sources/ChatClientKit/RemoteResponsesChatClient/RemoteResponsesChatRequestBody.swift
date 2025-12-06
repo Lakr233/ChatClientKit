@@ -144,7 +144,7 @@ struct ResponsesRequestTransformer: Sendable {
                         inputItems.append(.functionCall(
                             callID: call.id,
                             name: call.function.name,
-                            arguments: call.function.arguments
+                            arguments: call.function.arguments,
                         ))
                     }
                 }

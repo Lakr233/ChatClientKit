@@ -67,7 +67,7 @@ enum TestHelpers {
     }
 
     static func makeOpenRouterResponsesClient(
-        model: String = defaultOpenRouterModel
+        model: String = defaultOpenRouterModel,
     ) -> RemoteResponsesChatClient {
         let apiKey = requireAPIKey()
         return RemoteResponsesChatClient(
@@ -78,7 +78,7 @@ enum TestHelpers {
             additionalHeaders: [
                 "HTTP-Referer": "https://github.com/FlowDown/ChatClientKit",
                 "X-Title": "ChatClientKit Tests",
-            ]
+            ],
         )
     }
 

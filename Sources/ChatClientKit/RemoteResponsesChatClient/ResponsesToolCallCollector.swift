@@ -1,5 +1,5 @@
 //
-//  RemoteResponsesToolCallCollector.swift
+//  ResponsesToolCallCollector.swift
 //  ChatClientKit
 //
 //  Created by Henri on 2025/12/2.
@@ -37,7 +37,7 @@ final class ResponsesToolCallCollector {
         for itemID: String?,
         name: String?,
         delta: String?,
-        outputIndex: Int?
+        outputIndex _: Int?,
     ) {
         guard let itemID else { return }
         var pending = storage[itemID] ?? Pending(id: itemID, name: name ?? "", arguments: "")
@@ -57,7 +57,7 @@ final class ResponsesToolCallCollector {
         for itemID: String?,
         name: String?,
         arguments: String?,
-        outputIndex: Int?
+        outputIndex _: Int?,
     ) {
         guard let itemID else { return }
         var pending = storage[itemID] ?? Pending(id: itemID, name: name ?? "", arguments: "")

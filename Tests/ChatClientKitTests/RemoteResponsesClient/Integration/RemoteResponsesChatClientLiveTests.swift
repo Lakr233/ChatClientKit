@@ -13,7 +13,7 @@ import Testing
 struct RemoteResponsesChatClientLiveTests {
     @Test(
         "Responses API returns content",
-        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured)
+        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
     func responsesAPIProducesContent() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
@@ -34,7 +34,7 @@ struct RemoteResponsesChatClientLiveTests {
 
     @Test(
         "Streaming responses API yields chunks",
-        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured)
+        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
     func streamingResponsesAPIProducesChunks() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
@@ -50,7 +50,8 @@ struct RemoteResponsesChatClientLiveTests {
         var collectedContent = ""
         for try await event in stream {
             if case let .chatCompletionChunk(chunk) = event,
-               let delta = chunk.choices.first?.delta.content {
+               let delta = chunk.choices.first?.delta.content
+            {
                 collectedContent += delta
             }
         }
@@ -61,7 +62,7 @@ struct RemoteResponsesChatClientLiveTests {
 
     @Test(
         "Responses API respects developer instructions",
-        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured)
+        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
     func responsesAPIHonorsDeveloperInstructions() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
@@ -85,7 +86,7 @@ struct RemoteResponsesChatClientLiveTests {
 
     @Test(
         "Responses API handles multi-turn conversations",
-        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured)
+        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
     func responsesAPIHandlesMultiTurnContext() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
@@ -110,4 +111,3 @@ struct RemoteResponsesChatClientLiveTests {
         }
     }
 }
-

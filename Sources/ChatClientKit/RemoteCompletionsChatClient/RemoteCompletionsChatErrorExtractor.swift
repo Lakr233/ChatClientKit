@@ -37,7 +37,7 @@ struct RemoteCompletionsChatErrorExtractor {
                 return NSError(
                     domain: String(localized: "Server Error"),
                     code: 0,
-                    userInfo: [NSLocalizedDescriptionKey: message]
+                    userInfo: [NSLocalizedDescriptionKey: message],
                 )
             }
         }

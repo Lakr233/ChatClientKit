@@ -13,7 +13,7 @@ import Testing
 struct ResponseIntegrationTests {
     @Test(
         "Responses request returns content",
-        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured)
+        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
     func responsesRequestReturnsContent() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
@@ -37,7 +37,7 @@ struct ResponseIntegrationTests {
 
     @Test(
         "Responses streaming yields chunks",
-        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured)
+        .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
     func responsesStreamingYieldsChunks() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
@@ -53,7 +53,8 @@ struct ResponseIntegrationTests {
         var collected = ""
         for try await object in stream {
             if case let .chatCompletionChunk(chunk) = object,
-               let delta = chunk.choices.first?.delta.content {
+               let delta = chunk.choices.first?.delta.content
+            {
                 collected += delta
             }
         }
@@ -62,4 +63,3 @@ struct ResponseIntegrationTests {
         #expect(!normalized.isEmpty, "Expected streaming response to include text.")
     }
 }
-
