@@ -4,7 +4,8 @@ ChatClientKit is a Swift Package that unifies remote LLM APIs, local MLX models,
 
 ## Highlights
 - **One `ChatService` protocol** powering Remote (OpenAI-style), MLX, and Apple Intelligence clients with interchangeable APIs.
-- **Streaming built-in** via `AsyncSequence` and Server-Sent Events, including structured reasoning and tool-call payloads.
+- **Responses API ready** via `RemoteResponsesChatClient` for OpenAI/OpenRouter `/v1/responses` with streaming chunks.
+- **Streaming built-in** via `AsyncSequence` and Server-Sent Events, including structured reasoning, image, and tool-call payloads.
 - **Swift-first ergonomics** thanks to `ChatRequestBuilder` and `ChatMessageBuilder`, letting you compose prompts declaratively.
 - **Tooling aware**: Tool call routing, request supplements, and custom headers/body fields for provider-specific knobs.
 - **Observability ready** with the included `ChatServiceErrorCollector` and the shared `Logger` dependency.
@@ -72,6 +73,63 @@ for try await event in stream {
         triggerTool(call)
     }
 }
+```
+
+### Call the Responses API (OpenAI/OpenRouter)
+```swift
+let responsesClient = RemoteResponsesChatClient(
+    model: "google/gemini-3-pro-preview",
+    baseURL: "https://openrouter.ai/api",
+    path: "/v1/responses",
+    apiKey: ProcessInfo.processInfo.environment["OPENROUTER_API_KEY"]
+)
+
+// Collect the entire response
+let chunks = try await responsesClient.chatChunks {
+    ChatRequest.messages {
+        .system(content: .text("Answer concisely."))
+        .user(content: .text("What is the capital of France?"))
+    }
+    ChatRequest.temperature(0.3)
+}
+
+let text = ChatResponse(chunks: chunks).text
+
+// Or stream chunks as they arrive
+let responseStream = try await responsesClient.streamingChat {
+    ChatRequest.messages {
+        .user(content: .text("Compose a haiku about integration tests."))
+    }
+}
+
+for try await chunk in responseStream {
+    if case let .text(delta) = chunk { print(delta, terminator: "") }
+}
+```
+
+### Generate images with OpenRouter
+```swift
+let imageClient = RemoteCompletionsChatClient(
+    model: "google/gemini-2.5-flash-image",
+    baseURL: "https://openrouter.ai/api",
+    path: "/v1/chat/completions",
+    apiKey: ProcessInfo.processInfo.environment["OPENROUTER_API_KEY"],
+    additionalHeaders: [
+        "HTTP-Referer": "https://github.com/FlowDown/ChatClientKit",
+        "X-Title": "ChatClientKit Demo"
+    ],
+    additionalBodyField: [
+        "output_modalities": ["image", "text"],
+        "modalities": ["image", "text"]
+    ]
+)
+
+let imageResponse = try await imageClient.chat {
+    ChatRequest.system("You are a professional icon designer. You must return an image.")
+    ChatRequest.user("Generate a simple black-and-white line-art cat icon.")
+}
+
+let imageData = imageResponse.images.first?.data // base64 image payload
 ```
 
 ### Run local MLX models
