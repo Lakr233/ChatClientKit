@@ -12,3 +12,4 @@ struct EmptyRequestSanitizer: RequestSanitizing {
         body
     }
 }
+

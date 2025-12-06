@@ -26,3 +26,4 @@ extension [ChatRequestBody.Message] {
         return last.isUserText
     }
 }
+
