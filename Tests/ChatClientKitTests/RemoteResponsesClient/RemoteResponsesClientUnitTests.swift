@@ -278,7 +278,7 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        let content = try #require(ChatResponse(chunks: result).text)
+        let content = ChatResponse(chunks: result).text
         #expect(content.contains("[AUDIO]"))
         #expect(content.contains("diagram"))
     }
@@ -509,7 +509,7 @@ struct RemoteResponsesClientUnitTests {
 
         for try await _ in stream {}
 
-        let capturedError = await client.collectedErrors
+        let capturedError = client.collectedErrors
         #expect(capturedError?.contains("boom") == true)
     }
 
@@ -533,7 +533,7 @@ struct RemoteResponsesClientUnitTests {
         let decoder = RemoteResponsesChatResponseDecoder(decoder: JSONDecoderWrapper())
 
         let result = try decoder.decodeResponse(from: responseData)
-        let text = try #require(ChatResponse(chunks: result).text)
+        let text = ChatResponse(chunks: result).text
         #expect(text == "I cannot help with that.")
     }
 
