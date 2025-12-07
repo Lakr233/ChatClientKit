@@ -58,8 +58,10 @@ struct RemoteResponsesClientUnitTests {
         #expect(instructions?.contains("guide") == true)
 
         let input = try #require(json["input"] as? [[String: Any]])
-        #expect(input.count == 2)
+        // Sanitizer appends a trailing user placeholder; ensure items are present rather than exact count only.
+        #expect(input.count == 3)
 
+        // Original user content preserved
         let user = try #require(input.first)
         #expect(user["type"] as? String == "message")
         #expect(user["role"] as? String == "user")
@@ -68,10 +70,15 @@ struct RemoteResponsesClientUnitTests {
         #expect(firstContent["type"] as? String == "input_text")
         #expect(firstContent["text"] as? String == " hi ")
 
-        let tool = try #require(input.last)
-        #expect(tool["type"] as? String == "function_call_output")
-        #expect(tool["call_id"] as? String == "call-1")
-        #expect(tool["output"] as? String == "tool result")
+        // Tool output stays encoded even when sanitizer adds trailing placeholders
+        let toolOutput = try #require(input.first { $0["type"] as? String == "function_call_output" })
+        #expect(toolOutput["call_id"] as? String == "call-1")
+        #expect(toolOutput["output"] as? String == "tool result")
+
+        // Trailing placeholder user message exists to keep model progressing after tool use
+        let placeholderUser = try #require(input.last)
+        #expect(placeholderUser["type"] as? String == "message")
+        #expect(placeholderUser["role"] as? String == "user")
     }
 
     @Test("Encodes tools using responses schema")
@@ -178,16 +185,15 @@ struct RemoteResponsesClientUnitTests {
         let json = try #require(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
 
         let input = try #require(json["input"] as? [[String: Any]])
-        #expect(input.count == 2)
+        // Sanitizer inserts leading/trailing user placeholders around assistant tool calls.
+        #expect(input.count == 4)
 
-        let functionCall = try #require(input.first)
-        #expect(functionCall["type"] as? String == "function_call")
+        let functionCall = try #require(input.first { $0["type"] as? String == "function_call" })
         #expect(functionCall["call_id"] as? String == "call-1")
         #expect(functionCall["name"] as? String == "do_calc")
         #expect(functionCall["arguments"] as? String == "{\"v\":1}")
 
-        let tool = try #require(input.last)
-        #expect(tool["type"] as? String == "function_call_output")
+        let tool = try #require(input.first { $0["type"] as? String == "function_call_output" })
         #expect(tool["call_id"] as? String == "call-1")
         #expect(tool["output"] as? String == "result text")
     }

@@ -8,6 +8,8 @@
 import Foundation
 
 enum MessageSanitizer {
+    private static let placeholderText = "." // keep this dot
+
     static func ensureAssistantHasUserContext(messages: inout [ChatRequestBody.Message]) {
         var sanitized: [ChatRequestBody.Message] = []
         sanitized.reserveCapacity(messages.count + 2)
@@ -25,7 +27,7 @@ enum MessageSanitizer {
             }
 
             if needsLeadingUser {
-                sanitized.append(.user(content: .text("")))
+                sanitized.append(.user(content: .text(placeholderText)))
             }
 
             sanitized.append(message)
@@ -62,7 +64,7 @@ enum MessageSanitizer {
             for toolCall in toolCalls {
                 guard !existingToolResponseIDs.contains(toolCall.id) else { continue }
                 guard insertedPlaceholderIDs.insert(toolCall.id).inserted else { continue }
-                sanitized.append(.tool(content: .text(""), toolCallID: toolCall.id))
+                sanitized.append(.tool(content: .text(placeholderText), toolCallID: toolCall.id))
             }
         }
 
@@ -71,7 +73,7 @@ enum MessageSanitizer {
 
     static func ensureTrailingUserText(messages: inout [ChatRequestBody.Message]) {
         guard !messages.lastIsUserText else { return }
-        messages.append(.user(content: .text("")))
+        messages.append(.user(content: .text(placeholderText)))
     }
 
     static func mergeSystemMessages(_ messages: [ChatRequestBody.Message]) -> [ChatRequestBody.Message] {
