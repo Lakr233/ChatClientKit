@@ -92,7 +92,8 @@ struct RemoteCompletionsChatStreamProcessor {
 
                             chunkCount += 1
                             for choice in response.choices {
-                                if let reasoning = choice.delta.reasoningContent {
+                                let reasoning = choice.delta.reasoningContent ?? choice.delta.reasoning
+                                if let reasoning, !reasoning.isEmpty {
                                     continuation.yield(.reasoning(reasoning))
                                 }
                                 if let content = choice.delta.content {
@@ -123,7 +124,8 @@ struct RemoteCompletionsChatStreamProcessor {
 
                 for leftover in reducer.flushRemaining() {
                     for choice in leftover.choices {
-                        if let reasoning = choice.delta.reasoningContent {
+                        let reasoning = choice.delta.reasoningContent ?? choice.delta.reasoning
+                        if let reasoning, !reasoning.isEmpty {
                             continuation.yield(.reasoning(reasoning))
                         }
                         if let content = choice.delta.content {

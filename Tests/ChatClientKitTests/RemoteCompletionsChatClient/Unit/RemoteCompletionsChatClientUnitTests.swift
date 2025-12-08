@@ -149,6 +149,55 @@ struct RemoteCompletionsChatClientUnitTests {
         let bodyJSON = try #require(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
         #expect(bodyJSON["stream"] as? Bool == true)
     }
+
+    @Test("Streaming chat completion forwards explicit reasoning field")
+    func streamingChatCompletionRequest_emitsExplicitReasoningField() async throws {
+        let session = MockCompletionsURLSession(result: .failure(CompletionsTestError()))
+        let eventFactory = MockCompletionsEventSourceFactory()
+
+        let reasoningChunk = #"{"choices":[{"delta":{"reasoning":"plan","content":"Visible answer"}}]}"#
+
+        eventFactory.recordedEvents = [
+            .open,
+            .event(CompletionsTestEvent(data: reasoningChunk)),
+            .closed,
+        ]
+
+        let dependencies = RemoteChatClientDependencies(
+            session: session,
+            eventSourceFactory: eventFactory,
+            responseDecoderFactory: { JSONDecoderWrapper() },
+            chunkDecoderFactory: { JSONDecoderWrapper() },
+            errorExtractor: RemoteChatErrorExtractor(),
+            reasoningParser: CompletionReasoningDecoder(),
+            requestSanitizer: RequestSanitizer(),
+        )
+
+        let client = RemoteCompletionsChatClient(
+            model: "gpt-test",
+            baseURL: "https://example.com",
+            path: "/v1/chat/completions",
+            apiKey: TestHelpers.requireAPIKey(),
+            dependencies: dependencies,
+        )
+
+        let request = ChatRequestBody(messages: [
+            .user(content: .text("Hello")),
+        ])
+
+        let stream = try await client.streamingChat(body: request)
+
+        var received: [ChatResponseChunk] = []
+        for try await element in stream {
+            received.append(element)
+        }
+
+        let reasoningDelta = received.compactMap(\.reasoningValue).first
+        #expect(reasoningDelta == "plan")
+
+        let contentDelta = received.compactMap(\.textValue).first
+        #expect(contentDelta == "Visible answer")
+    }
 }
 
 // MARK: - Test Doubles
