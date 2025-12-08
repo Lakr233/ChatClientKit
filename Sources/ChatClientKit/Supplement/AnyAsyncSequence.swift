@@ -6,7 +6,7 @@
 import Foundation
 
 /// An `AsyncSequence` that performs type erasure by wrapping another.
-public struct AnyAsyncSequence<Element>: AsyncSequence {
+public struct AnyAsyncSequence<Element>: AsyncSequence, @unchecked Sendable {
     let source: () -> AnyAsyncIterator
 
     public struct AnyAsyncIterator: AsyncIteratorProtocol {
