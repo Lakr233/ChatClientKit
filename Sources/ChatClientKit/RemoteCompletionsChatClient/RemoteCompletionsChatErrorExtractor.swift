@@ -43,20 +43,29 @@ struct RemoteCompletionsChatErrorExtractor {
         }
 
         if let errorContent = dictionary["error"] as? [String: Any], !errorContent.isEmpty {
-            var message = errorContent["message"] as? String ?? unknownErrorMessage
+            let message = errorContent["message"] as? String ?? unknownErrorMessage
             let code = errorContent["code"] as? Int ?? 403
-            if let metadata = errorContent["metadata"] as? [String: Any],
-               let metadataMessage = metadata["message"] as? String
+            var details = ""
+            if let metadata = errorContent["metadata"],
+               let metadataData = try? JSONSerialization.data(
+                   withJSONObject: metadata,
+                   options: [
+                       .prettyPrinted,
+                       .sortedKeys,
+                   ],
+               ),
+               let detail = String(data: metadataData, encoding: .utf8)
             {
-                message += " \(metadataMessage)"
+                details = detail
             }
+            let full = ["\(message) @ \(code)", details]
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n")
             return NSError(
                 domain: String(localized: "Server Error"),
                 code: code,
                 userInfo: [
-                    NSLocalizedDescriptionKey: String(
-                        localized: "Server returns an error: \(code) \(message)",
-                    ),
+                    NSLocalizedDescriptionKey: full,
                 ],
             )
         }
