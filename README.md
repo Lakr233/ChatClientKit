@@ -3,6 +3,7 @@
 ChatClientKit is a Swift Package that unifies remote LLM APIs, local MLX models, and Apple Intelligence into a single, streaming-first interface. It ships with an ergonomic request DSL, rich tool-calling support, and a flexible error-collection pipeline so you can embed conversational AI in macOS, iOS, and Catalyst apps without rewriting clients per provider.
 
 ## Highlights
+
 - **One `ChatService` protocol** powering Remote (OpenAI-style), MLX, and Apple Intelligence clients with interchangeable APIs.
 - **Responses API ready** via `RemoteResponsesChatClient` for OpenAI/OpenRouter `/v1/responses` with streaming chunks.
 - **Streaming built-in** via `AsyncSequence` and Server-Sent Events, including structured reasoning, image, and tool-call payloads.
@@ -11,6 +12,7 @@ ChatClientKit is a Swift Package that unifies remote LLM APIs, local MLX models,
 - **Observability ready** with the included `ChatServiceErrorCollector` and the shared `Logger` dependency.
 
 ## Requirements
+
 - Swift 6.0 toolchain (Xcode 16 beta or Swift 6 nightly).
 - macOS 14+ for MLX builds; iOS 17+/macCatalyst 17+ for runtime targets.
 - Apple Intelligence integrations require the Foundation models runtime (iOS 26/macOS 26 SDKs) and run-time availability checks.
@@ -37,6 +39,7 @@ targets: [
 ## Usage
 
 ### Configure a remote model
+
 ```swift
 import ChatClientKit
 
@@ -57,6 +60,7 @@ print(response.choices.first?.message.content ?? "")
 ```
 
 ### Stream responses
+
 ```swift
 let stream = try await client.streamingChatCompletion {
     ChatRequest.system("You stream thoughts and final answers.")
@@ -76,6 +80,7 @@ for try await event in stream {
 ```
 
 ### Call the Responses API (OpenAI/OpenRouter)
+
 ```swift
 let responsesClient = RemoteResponsesChatClient(
     model: "google/gemini-3-pro-preview",
@@ -108,6 +113,7 @@ for try await chunk in responseStream {
 ```
 
 ### Generate images with OpenRouter
+
 ```swift
 let imageClient = RemoteCompletionsChatClient(
     model: "google/gemini-2.5-flash-image",
@@ -133,6 +139,7 @@ let imageData = imageResponse.images.first?.data // base64 image payload
 ```
 
 ### Run local MLX models
+
 ```swift
 let localClient = MLXChatClient(
     url: URL(fileURLWithPath: "/Models/Qwen2.5-7B-Instruct")
@@ -146,6 +153,7 @@ let reply = try await localClient.chatCompletion {
 ```
 
 ### Tap into Apple Intelligence
+
 ```swift
 if #available(iOS 26, macOS 26, macCatalyst 26, *) {
     let aiClient = AppleIntelligenceChatClient()
@@ -156,6 +164,7 @@ if #available(iOS 26, macOS 26, macCatalyst 26, *) {
 ```
 
 ### Build chat requests declaratively
+
 ```swift
 let makeStandupRequest = {
     ChatRequest {
@@ -179,6 +188,7 @@ let makeStandupRequest = {
 ```
 
 ### Collect and surface errors
+
 ```swift
 do {
     _ = try await client.chatCompletion { /* ... */ }
@@ -189,6 +199,7 @@ do {
 ```
 
 ## Architecture at a Glance
+
 - `ChatService` is the core abstraction; `RemoteCompletionsChatClient`, `MLXChatClient`, and `AppleIntelligenceChatClient` conform to it.
 - `RemoteClient` uses Server-Sent Events via the `ServerEvent` helper target plus `RemoteChatStreamProcessor` to decode incremental JSON chunks.
 - `MLXClient` wraps MLX, MLXLLM, and MLXVLM to coordinate weights, vision inputs, and request queues for on-device inference.
@@ -196,10 +207,12 @@ do {
 - `RequestBuilder` and `Supplement` keep request construction expressive while enabling additional metadata injection per provider.
 
 ## Development
+
 - Build: `swift build`
 - Test: `swift test`
 - Update dependencies: `swift package update`
 - When running MLX locally, make sure your model folder matches the expected MLX layout (`tokenizer.json`, `config.json`, weights shards, etc.).
 
 ## License
+
 ChatClientKit is available under the [MIT License](LICENSE).
