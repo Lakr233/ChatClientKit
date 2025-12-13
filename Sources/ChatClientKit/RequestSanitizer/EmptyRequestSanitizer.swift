@@ -7,8 +7,10 @@
 
 import Foundation
 
-struct EmptyRequestSanitizer: RequestSanitizing {
-    func sanitize(_ body: ChatRequestBody) -> ChatRequestBody {
+public struct EmptyRequestSanitizer: RequestSanitizing {
+    public init() {}
+
+    public func sanitize(_ body: ChatRequestBody) -> ChatRequestBody {
         body
     }
 }

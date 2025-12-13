@@ -7,6 +7,6 @@
 
 import Foundation
 
-protocol RequestSanitizing: Sendable {
+public protocol RequestSanitizing: Sendable {
     func sanitize(_ body: ChatRequestBody) -> ChatRequestBody
 }

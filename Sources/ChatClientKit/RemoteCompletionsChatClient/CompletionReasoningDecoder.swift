@@ -7,16 +7,16 @@
 
 import Foundation
 
-struct CompletionReasoningDecoder: Sendable {
-    let startToken: String
-    let endToken: String
+public struct CompletionReasoningDecoder: Sendable {
+    public let startToken: String
+    public let endToken: String
 
-    init(startToken: String = ChatClientConstants.reasoningDecoderBegin, endToken: String = ChatClientConstants.reasoningDecoderEnd) {
+    public init(startToken: String = ChatClientConstants.reasoningDecoderBegin, endToken: String = ChatClientConstants.reasoningDecoderEnd) {
         self.startToken = startToken
         self.endToken = endToken
     }
 
-    func extractingReasoningContent(
+    public func extractingReasoningContent(
         from delta: ChatCompletionChunk.Choice.Delta,
     ) -> ChatCompletionChunk.Choice.Delta {
         guard delta.reasoning?.isEmpty != false,
@@ -48,16 +48,16 @@ struct CompletionReasoningDecoder: Sendable {
     }
 }
 
-struct ReasoningStreamReducer: Sendable {
-    let parser: CompletionReasoningDecoder
-    var isInsideReasoningContent = false
-    var contentBuffer = ""
+public struct ReasoningStreamReducer: Sendable {
+    public let parser: CompletionReasoningDecoder
+    public var isInsideReasoningContent = false
+    public var contentBuffer = ""
 
-    init(parser: CompletionReasoningDecoder) {
+    public init(parser: CompletionReasoningDecoder) {
         self.parser = parser
     }
 
-    mutating func process(
+    public mutating func process(
         contentSegments: [String],
         into chunk: inout ChatCompletionChunk,
     ) {
@@ -72,7 +72,7 @@ struct ReasoningStreamReducer: Sendable {
         )
     }
 
-    mutating func flushRemaining() -> [ChatCompletionChunk] {
+    public mutating func flushRemaining() -> [ChatCompletionChunk] {
         guard !contentBuffer.isEmpty else { return [] }
 
         var emittedChunks: [ChatCompletionChunk] = []

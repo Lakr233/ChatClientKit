@@ -7,14 +7,14 @@
 
 import Foundation
 
-struct RemoteCompletionsChatErrorExtractor {
-    let unknownErrorMessage: String
+public struct RemoteCompletionsChatErrorExtractor: Sendable {
+    public let unknownErrorMessage: String
 
-    init(unknownErrorMessage: String = String(localized: "Unknown Error")) {
+    public init(unknownErrorMessage: String = String(localized: "Unknown Error")) {
         self.unknownErrorMessage = unknownErrorMessage
     }
 
-    func extractError(from input: Data) -> Swift.Error? {
+    public func extractError(from input: Data) -> Swift.Error? {
         guard let dictionary = try? JSONSerialization.jsonObject(with: input, options: []) as? [String: Any] else {
             return nil
         }
@@ -73,7 +73,7 @@ struct RemoteCompletionsChatErrorExtractor {
         return nil
     }
 
-    func extractMessage(in dictionary: [String: Any]) -> String? {
+    public func extractMessage(in dictionary: [String: Any]) -> String? {
         var queue: [Any] = [dictionary]
         while !queue.isEmpty {
             let current = queue.removeFirst()
