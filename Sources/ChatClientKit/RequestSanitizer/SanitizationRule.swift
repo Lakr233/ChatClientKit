@@ -9,7 +9,6 @@ import Foundation
 
 enum SanitizationRule: CaseIterable {
     case mergeSystemMessages
-    case ensureAssistantHasUserContext
     case ensureToolResponses
     case ensureTrailingUserText
 
@@ -25,8 +24,6 @@ enum SanitizationRule: CaseIterable {
         switch self {
         case .mergeSystemMessages:
             messages = MessageSanitizer.mergeSystemMessages(messages)
-        case .ensureAssistantHasUserContext:
-            MessageSanitizer.ensureAssistantHasUserContext(messages: &messages)
         case .ensureToolResponses:
             MessageSanitizer.ensureToolResponses(messages: &messages)
         case .ensureTrailingUserText:

@@ -10,32 +10,6 @@ import Foundation
 enum MessageSanitizer {
     private static let placeholderText = "." // keep this dot
 
-    static func ensureAssistantHasUserContext(messages: inout [ChatRequestBody.Message]) {
-        var sanitized: [ChatRequestBody.Message] = []
-        sanitized.reserveCapacity(messages.count + 2)
-
-        for message in messages {
-            guard case .assistant = message else {
-                sanitized.append(message)
-                continue
-            }
-
-            let needsLeadingUser: Bool = if let last = sanitized.last {
-                !last.isUser
-            } else {
-                true
-            }
-
-            if needsLeadingUser {
-                sanitized.append(.user(content: .text(placeholderText)))
-            }
-
-            sanitized.append(message)
-        }
-
-        messages = sanitized
-    }
-
     static func ensureToolResponses(messages: inout [ChatRequestBody.Message]) {
         let existingToolResponseIDs: Set<String> = Set(
             messages.compactMap { message in
