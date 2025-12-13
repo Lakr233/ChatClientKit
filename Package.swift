@@ -11,7 +11,7 @@ let package = Package(
         .macCatalyst(.v17),
     ],
     products: [
-        .library(name: "ChatClientKit", targets: ["ChatClientKit"]),
+        .library(name: "ChatClientKit", type: .dynamic, targets: ["ChatClientKit"]),
     ],
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.29.1"),
