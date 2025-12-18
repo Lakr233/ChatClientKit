@@ -59,6 +59,29 @@ public enum AnyCodingValue: Sendable, Codable {
     }
 }
 
+extension AnyCodingValue: Equatable {
+    public static func == (lhs: AnyCodingValue, rhs: AnyCodingValue) -> Bool {
+        switch (lhs, rhs) {
+        case (.null, .null):
+            true
+        case let (.bool(a), .bool(b)):
+            a == b
+        case let (.int(a), .int(b)):
+            a == b
+        case let (.double(a), .double(b)):
+            a == b
+        case let (.string(a), .string(b)):
+            a == b
+        case let (.array(a), .array(b)):
+            a == b
+        case let (.object(a), .object(b)):
+            a == b
+        default:
+            false
+        }
+    }
+}
+
 public extension [String: AnyCodingValue] {
     var untypedDictionary: [String: Any] {
         convertToUntypedDictionary(self)
