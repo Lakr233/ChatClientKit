@@ -2,6 +2,10 @@
 
 ChatClientKit is a Swift Package that unifies remote LLM APIs, local MLX models, and Apple Intelligence into a single, streaming-first interface. It ships with an ergonomic request DSL, rich tool-calling support, and a flexible error-collection pipeline so you can embed conversational AI in macOS, iOS, and Catalyst apps without rewriting clients per provider.
 
+## When Building Fails
+
+`ChatClientKit` relies on `mlx-swift-lm`, which may not always provide up-to-date releases. If you encounter build issues, add `mlx-swift-lm` directly to your workspace and override this package by using the `main` branch.
+
 ## Highlights
 
 - **One `ChatService` protocol** powering Remote (OpenAI-style), MLX, and Apple Intelligence clients with interchangeable APIs.
