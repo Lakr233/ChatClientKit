@@ -7,8 +7,15 @@
 
 import Foundation
 
+public enum DefaultMessageSanitizerConfiguration {
+    public nonisolated(unsafe) static var placeholderText = "." // keep this dot
+}
+
 enum MessageSanitizer {
-    private static let placeholderText = "." // keep this dot
+    nonisolated(unsafe) static var placeholderText: String {
+        get { DefaultMessageSanitizerConfiguration.placeholderText }
+        set { DefaultMessageSanitizerConfiguration.placeholderText = newValue }
+    }
 
     static func ensureToolResponses(messages: inout [ChatRequestBody.Message]) {
         let existingToolResponseIDs: Set<String> = Set(
