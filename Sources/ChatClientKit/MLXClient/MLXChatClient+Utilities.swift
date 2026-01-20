@@ -10,6 +10,7 @@ import MLXLLM
 @preconcurrency import MLXLMCommon
 import MLXVLM
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 extension MLXChatClient {
     func resolve(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {
         var body = body.mergingAdjacentAssistantMessages()

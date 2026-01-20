@@ -10,11 +10,13 @@ import Foundation
 @preconcurrency import MLXLMCommon
 @preconcurrency import MLXVLM
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 public enum MLXModelKind: Equatable, Sendable {
     case llm
     case vlm
 }
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 public protocol MLXModelCoordinating: Sendable {
     func container(
         for configuration: ModelConfiguration,
@@ -24,11 +26,13 @@ public protocol MLXModelCoordinating: Sendable {
     func reset() async
 }
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 public protocol MLXModelLoading: Sendable {
     func loadLLM(configuration: ModelConfiguration) async throws -> ModelContainer
     func loadVLM(configuration: ModelConfiguration) async throws -> ModelContainer
 }
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 public struct DefaultMLXModelLoader: MLXModelLoading {
     public init() {}
 
@@ -41,6 +45,7 @@ public struct DefaultMLXModelLoader: MLXModelLoading {
     }
 }
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 public actor MLXModelCoordinator: MLXModelCoordinating {
     public nonisolated static let shared = MLXModelCoordinator()
 

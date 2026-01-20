@@ -25,6 +25,9 @@ enum TestHelpers {
 
     /// Check if MLX model fixture is available (for use with @Test(.enabled(if:)))
     static var isMLXModelAvailable: Bool {
+        guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else {
+            return false
+        }
         guard !MLX.GPU.deviceInfo().architecture.isEmpty else {
             return false
         }
@@ -241,6 +244,9 @@ enum TestHelpers {
     }
 
     static func checkGPU() -> Bool {
+        guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else {
+            return false
+        }
         guard !MLX.GPU.deviceInfo().architecture.isEmpty else {
             return false
         }

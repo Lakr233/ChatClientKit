@@ -59,6 +59,8 @@ struct MLXChatClientQueueTests {
 
     @Test("Queue blocks concurrent acquisitions until release")
     func queue_blocksConcurrentAcquisitions() async throws {
+        guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else { return }
+
         let queue = MLXChatClientQueue.shared
         let tracker = AcquisitionTracker()
 
@@ -92,6 +94,7 @@ struct MLXChatClientQueueTests {
 
     @Test("Queue allows only a single MLX inference at a time", .enabled(if: TestHelpers.checkGPU()))
     func queue_allowsSingleInferenceAtATimeWithMLX() async throws {
+        guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else { return }
         guard TestHelpers.checkGPU() else { return }
 
         let modelURL = TestHelpers.fixtureURLOrSkip(named: "mlx_testing_model")
@@ -130,6 +133,7 @@ struct MLXChatClientQueueTests {
         #expect(secondFirstChunk.timeIntervalSince(firstCompletion) >= -tolerance)
     }
 
+    @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
     func runStreamingInference(
         label: String,
         prompt: String,

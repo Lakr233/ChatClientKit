@@ -12,6 +12,7 @@ import Foundation
 @preconcurrency import MLXVLM
 import Tokenizers
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 extension MLXChatClient {
     func streamingChatCompletionRequestExecute(
         body: ChatRequestBody,
@@ -115,11 +116,13 @@ extension MLXChatClient {
     }
 }
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 struct ChunkDecodeResult {
     let chunk: ChatCompletionChunk?
     let shouldStop: Bool
 }
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 struct ChunkDecoder {
     let context: ModelContext
 

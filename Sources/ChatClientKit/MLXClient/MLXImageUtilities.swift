@@ -10,12 +10,14 @@ import CoreImage
 import Foundation
 import ImageIO
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 enum MLXImageContentMode {
     case contentFill
     case contentAspectFill
     case contentAspectFit
 }
 
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 enum MLXImageUtilities {
     static let defaultColor = CGColor(gray: 1.0, alpha: 1.0)
 

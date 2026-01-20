@@ -14,6 +14,8 @@ import Testing
 struct MLXChatClientIntegrationTests {
     @Test("Local MLX chat completion returns content", .enabled(if: TestHelpers.isMLXModelAvailable))
     func localModelProducesContent() async throws {
+        guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else { return }
+
         let modelURL = TestHelpers.fixtureURLOrSkip(named: "mlx_testing_model")
         let client = MLXChatClient(url: modelURL)
 
