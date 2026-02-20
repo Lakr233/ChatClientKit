@@ -22,12 +22,21 @@ extension MLXChatClient {
         let generateParameters = generateParameters(body: body)
         let container = try await loadContainer(adjusting: &userInput)
         let lockedInput = userInput
+        let toolSpecs = userInput.tools
         return try await container.perform { context in
             let input = try await context.processor.prepare(input: lockedInput)
+
+            let toolCallFormat = context.configuration.toolCallFormat ?? .json
 
             return AsyncThrowingStream { continuation in
                 let workerTask = Task.detached(priority: .userInitiated) {
                     defer { MLXChatClientQueue.shared.release(token: token) }
+
+                    let toolProcessor: ToolCallProcessor? = if let toolSpecs, !toolSpecs.isEmpty {
+                        ToolCallProcessor(format: toolCallFormat, tools: toolSpecs)
+                    } else {
+                        nil
+                    }
 
                     var latestOutputLength = 0
                     var isReasoning = false
@@ -59,7 +68,13 @@ extension MLXChatClient {
                                         continuation.yield(ChatResponseChunk.reasoning(reasoning))
                                     }
                                     if let content = choice.delta.content {
-                                        continuation.yield(ChatResponseChunk.text(content))
+                                        if let toolProcessor {
+                                            if let passthrough = toolProcessor.processChunk(content) {
+                                                continuation.yield(ChatResponseChunk.text(passthrough))
+                                            }
+                                        } else {
+                                            continuation.yield(ChatResponseChunk.text(content))
+                                        }
                                     }
                                 }
                             }
@@ -89,8 +104,25 @@ extension MLXChatClient {
                                     continuation.yield(ChatResponseChunk.reasoning(reasoning))
                                 }
                                 if let content = choice.delta.content {
-                                    continuation.yield(ChatResponseChunk.text(content))
+                                    if let toolProcessor {
+                                        if let passthrough = toolProcessor.processChunk(content) {
+                                            continuation.yield(ChatResponseChunk.text(passthrough))
+                                        }
+                                    } else {
+                                        continuation.yield(ChatResponseChunk.text(content))
+                                    }
                                 }
+                            }
+                        }
+
+                        if let toolProcessor {
+                            for toolCall in toolProcessor.toolCalls {
+                                let argsJSON = toolCallArgsToJSON(toolCall.function.arguments)
+                                let request = ToolRequest(
+                                    name: toolCall.function.name,
+                                    args: argsJSON,
+                                )
+                                continuation.yield(ChatResponseChunk.tool(request))
                             }
                         }
 
@@ -211,4 +243,15 @@ struct ChunkDecoder {
         let choice: ChatCompletionChunk.Choice = .init(delta: delta)
         return .init(choices: [choice])
     }
+}
+
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
+private func toolCallArgsToJSON(_ arguments: [String: JSONValue]) -> String {
+    let anyObject = arguments.mapValues { $0.anyValue }
+    guard let data = try? JSONSerialization.data(withJSONObject: anyObject, options: [.sortedKeys]),
+          let json = String(data: data, encoding: .utf8)
+    else {
+        return "{}"
+    }
+    return json
 }

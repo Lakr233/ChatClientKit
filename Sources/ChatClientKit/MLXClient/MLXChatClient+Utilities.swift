@@ -20,29 +20,45 @@ extension MLXChatClient {
     }
 
     func userInput(body: ChatRequestBody) -> UserInput {
-        var messages: [[String: String]] = []
+        var messages: [[String: any Sendable]] = []
         var images: [UserInput.Image] = []
         for message in body.messages {
             switch message {
-            case let .assistant(content, _, _):
-                guard let content else {
-                    continue
+            case let .assistant(content, toolCalls, _):
+                var msg: [String: any Sendable] = ["role": "assistant"]
+                if let content { msg["content"] = userInputContent(for: content) }
+                if let toolCalls, !toolCalls.isEmpty {
+                    msg["tool_calls"] = toolCalls.map { tc -> [String: any Sendable] in
+                        [
+                            "type": "function",
+                            "id": tc.id,
+                            "function": [
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments ?? "",
+                            ] as [String: any Sendable],
+                        ]
+                    }
                 }
-                let msg = ["role": "assistant", "content": userInputContent(for: content)]
                 messages.append(msg)
             case let .system(content, _):
-                let msg = ["role": "system", "content": userInputContent(for: content)]
+                let msg: [String: any Sendable] = ["role": "system", "content": userInputContent(for: content)]
                 messages.append(msg)
+            case let .tool(content, toolCallID):
+                messages.append([
+                    "role": "tool",
+                    "content": userInputContent(for: content),
+                    "tool_call_id": toolCallID,
+                ])
             case let .user(content, _):
                 switch content {
                 case let .text(text):
-                    let msg = ["role": "user", "content": text]
+                    let msg: [String: any Sendable] = ["role": "user", "content": text]
                     messages.append(msg)
                 case let .parts(contentParts):
                     for part in contentParts {
                         switch part {
                         case let .text(text):
-                            let msg = ["role": "user", "content": text]
+                            let msg: [String: any Sendable] = ["role": "user", "content": text]
                             messages.append(msg)
                         case let .imageURL(url, _):
                             guard let text = url.absoluteString.components(separatedBy: ";base64,").last,
@@ -84,7 +100,8 @@ extension MLXChatClient {
                 continue
             }
         }
-        return .init(messages: messages, images: images)
+        let tools = convertToToolSpecs(body.tools)
+        return .init(messages: messages, images: images, tools: tools)
     }
 
     func generateParameters(body: ChatRequestBody) -> GenerateParameters {
@@ -117,6 +134,42 @@ extension MLXChatClient {
             text
         case let .parts(strings):
             strings.joined(separator: "\n")
+        }
+    }
+
+    func convertToToolSpecs(_ tools: [ChatRequestBody.Tool]?) -> [[String: any Sendable]]? {
+        guard let tools, !tools.isEmpty else { return nil }
+        return tools.map { tool -> [String: any Sendable] in
+            switch tool {
+            case let .function(name, description, parameters, strict):
+                var function: [String: any Sendable] = ["name": name]
+                if let description { function["description"] = description }
+                if let parameters { function["parameters"] = anyCodingValueToSendable(.object(parameters)) }
+                if let strict { function["strict"] = strict }
+                return [
+                    "type": "function",
+                    "function": function,
+                ]
+            }
+        }
+    }
+
+    func anyCodingValueToSendable(_ value: AnyCodingValue) -> any Sendable {
+        switch value {
+        case .null:
+            NSNull()
+        case let .bool(bool):
+            bool
+        case let .int(int):
+            int
+        case let .double(double):
+            double
+        case let .string(string):
+            string
+        case let .array(array):
+            array.map { anyCodingValueToSendable($0) }
+        case let .object(dictionary):
+            dictionary.mapValues { anyCodingValueToSendable($0) } as [String: any Sendable]
         }
     }
 }
