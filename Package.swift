@@ -14,7 +14,7 @@ let package = Package(
         .library(name: "ChatClientKit", type: .dynamic, targets: ["ChatClientKit"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm/", from: "2.29.2"),
+        .package(url: "https://github.com/ml-explore/mlx-swift-lm/", from: "2.30.6"),
     ],
     targets: [
         .target(
