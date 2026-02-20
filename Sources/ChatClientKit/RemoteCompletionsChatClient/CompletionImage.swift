@@ -7,7 +7,7 @@
 
 import Foundation
 
-// data transfer object
+/// data transfer object
 public struct CompletionImage: Sendable, Decodable, Equatable {
     public struct ImageURL: Sendable, Decodable, Equatable {
         public let url: String

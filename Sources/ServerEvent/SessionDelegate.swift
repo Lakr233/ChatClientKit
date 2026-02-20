@@ -17,7 +17,9 @@ class SessionDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
 
     let internalStream = AsyncStream<Event>.makeStream()
 
-    var eventStream: AsyncStream<Event> { internalStream.stream }
+    var eventStream: AsyncStream<Event> {
+        internalStream.stream
+    }
 
     func urlSession(
         _: URLSession,

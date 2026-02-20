@@ -11,7 +11,7 @@ public class MLXChatClient: ChatService, @unchecked Sendable {
     let coordinator: MLXModelCoordinating
     let preferredKind: MLXModelKind
 
-    // Hex UTF-8 bytes EF BF BD
+    /// Hex UTF-8 bytes EF BF BD
     static let decoderErrorSuffix = String(data: Data([0xEF, 0xBF, 0xBD]), encoding: .utf8)!
 
     public let errorCollector = ErrorCollector.new()

@@ -7,9 +7,9 @@
 
 import Foundation
 
-/// A synchronization primitive that protects shared mutable state via mutual exclusion.
-///
-/// A back-port of Swift's `Mutex` type for wider platform availability.
+// A synchronization primitive that protects shared mutable state via mutual exclusion.
+//
+// A back-port of Swift's `Mutex` type for wider platform availability.
 #if hasFeature(StaticExclusiveOnly)
     @_staticExclusiveOnly
 #endif

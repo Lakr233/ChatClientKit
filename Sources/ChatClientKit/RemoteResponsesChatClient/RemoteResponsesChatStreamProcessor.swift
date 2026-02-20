@@ -346,7 +346,9 @@ struct ResponsesStreamEvent: Decodable {
     let summaryIndex: Int?
     let refusal: String?
 
-    var kind: Kind { Kind(rawValue: type) ?? .unknown }
+    var kind: Kind {
+        Kind(rawValue: type) ?? .unknown
+    }
 
     enum CodingKeys: String, CodingKey {
         case type

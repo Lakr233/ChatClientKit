@@ -1,15 +1,16 @@
 @testable import ChatClientKit
-import Testing
-
 import Foundation
 import FoundationModels
+import Testing
 
 // Convenience shims to align test expectations with current ChatClientKit types.
 private typealias Function = ChatRequestBody.Message.ToolCall.Function
 private typealias ToolCall = ChatCompletionChunk.Choice.Delta.ToolCall
 
 private extension ChatRequestBody.Message.ToolCall.Function {
-    var argumentsRaw: String? { arguments }
+    var argumentsRaw: String? {
+        arguments
+    }
 
     var parsedArguments: [String: Any]? {
         guard let arguments, let data = arguments.data(using: .utf8) else { return nil }

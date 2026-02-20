@@ -107,7 +107,7 @@ public extension ChatRequestBody {
 }
 
 public extension ChatRequestBody.Message {
-    enum MessageContent<SingleType, PartsType>: @unchecked Sendable, Encodable, SingleOrPartsEncodable where SingleType: Encodable, PartsType: Encodable {
+    enum MessageContent<SingleType: Encodable, PartsType: Encodable>: @unchecked Sendable, Encodable, SingleOrPartsEncodable {
         case text(SingleType)
         case parts(PartsType)
 
@@ -199,10 +199,6 @@ public extension ChatRequestBody.Message {
             self.function = function
         }
     }
-}
-
-public extension ChatRequestBody {
-    // Image configuration should be sent via extra body when needed.
 }
 
 public extension ChatRequestBody.Message.ToolCall {

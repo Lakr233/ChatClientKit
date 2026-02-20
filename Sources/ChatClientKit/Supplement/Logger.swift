@@ -4,7 +4,6 @@
 //
 
 import Foundation
-
 import OSLog
 
 let logger = Logger(subsystem: "ChatClientKit", category: "ChatClientKit")

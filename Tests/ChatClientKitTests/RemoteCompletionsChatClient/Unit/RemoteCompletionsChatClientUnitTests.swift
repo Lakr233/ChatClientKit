@@ -49,8 +49,8 @@ struct RemoteCompletionsChatClientUnitTests {
             "message": "Invalid API key",
         ]
         let responseData = try JSONSerialization.data(withJSONObject: errorJSON)
-        let response = URLResponse(
-            url: URL(string: "https://example.com/v1/chat/completions")!,
+        let response = try URLResponse(
+            url: #require(URL(string: "https://example.com/v1/chat/completions")),
             mimeType: "application/json",
             expectedContentLength: responseData.count,
             textEncodingName: nil,

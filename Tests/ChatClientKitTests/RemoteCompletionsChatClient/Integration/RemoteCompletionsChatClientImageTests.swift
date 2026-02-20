@@ -57,7 +57,7 @@ struct RemoteCompletionsChatClientImageTests {
     }
 
     @Test("Image generation did decode image payload")
-    func imageGenerationDecodesImage() async throws {
+    func imageGenerationDecodesImage() throws {
         let object = """
         {
             "id": "gen-1765022540-E8rFudi6QOQq2QjD1dJ7",
@@ -86,7 +86,7 @@ struct RemoteCompletionsChatClientImageTests {
             ]
         }
         """
-        let data = object.data(using: .utf8)!
+        let data = try #require(object.data(using: .utf8))
         do {
             let chunk = try JSONDecoder().decode(ChatCompletionChunk.self, from: data)
             let url = chunk.choices.first?.delta.images?.first?.imageURL

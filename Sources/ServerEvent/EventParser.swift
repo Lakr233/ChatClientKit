@@ -33,9 +33,7 @@ struct ServerEventParser: EventParser {
 
     func parseBuffer(for rawMessages: [Data]) -> [EVEvent] {
         // Parse data to ServerMessage model
-        let messages: [ServerSentEvent] = rawMessages.compactMap { ServerSentEvent.parse(from: $0, mode: mode) }
-
-        return messages
+        rawMessages.compactMap { ServerSentEvent.parse(from: $0, mode: mode) }
     }
 
     func splitBuffer(for data: Data) -> (completeData: [Data], remainingData: Data) {
