@@ -9,10 +9,9 @@
 import Foundation
 import Testing
 
-@Suite("RemoteCompletionsChatClient Tool Tests")
 struct RemoteCompletionsChatToolTests {
-    @Test("Non-streaming chat completion with tool calls", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func nonStreamingChatCompletionWithTools() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Non-streaming chat completion with tool calls`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let getWeatherTool = ChatRequestBody.Tool.function(
@@ -52,8 +51,8 @@ struct RemoteCompletionsChatToolTests {
         }
     }
 
-    @Test("Streaming chat completion with tool calls", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func streamingChatCompletionWithTools() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Streaming chat completion with tool calls`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let getWeatherTool = ChatRequestBody.Tool.function(
@@ -99,8 +98,8 @@ struct RemoteCompletionsChatToolTests {
         #expect(toolCalls.count > 0 || contentChunks.count > 0)
     }
 
-    @Test("Streaming chat completion collects tool calls", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func streamingCollectsToolCalls() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Streaming chat completion collects tool calls`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let getWeatherTool = ChatRequestBody.Tool.function(

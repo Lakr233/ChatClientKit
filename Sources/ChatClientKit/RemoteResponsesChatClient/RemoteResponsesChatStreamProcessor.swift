@@ -122,7 +122,7 @@ struct RemoteResponsesChatStreamProcessor {
 }
 
 extension RemoteResponsesChatStreamProcessor {
-    struct OutputItemMetadata: Sendable {
+    struct OutputItemMetadata {
         let role: String
         let outputIndex: Int?
     }

@@ -13,10 +13,10 @@ import Foundation
 @preconcurrency import MLXVLM
 import Testing
 
-@Suite("MLX Model Coordinator", .serialized)
+@Suite(.serialized)
 struct MLXModelCoordinatorTests {
-    @Test("Coordinator caches containers for identical configuration and kind")
-    func coordinator_cachesContainerForSameKey() async throws {
+    @Test
+    func `Coordinator caches containers for identical configuration and kind`() async throws {
         guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else { return }
         guard TestHelpers.checkGPU() else { return }
 
@@ -29,8 +29,8 @@ struct MLXModelCoordinatorTests {
         #expect(first === second)
     }
 
-    @Test("Coordinator reuses in-flight task for identical concurrent requests")
-    func coordinator_reusesInFlightLoads() async throws {
+    @Test
+    func `Coordinator reuses in-flight task for identical concurrent requests`() async throws {
         guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else { return }
         guard TestHelpers.checkGPU() else { return }
 
@@ -44,8 +44,8 @@ struct MLXModelCoordinatorTests {
         #expect(containers.0 === containers.1)
     }
 
-    @Test("Reset clears cached container")
-    func coordinator_resetClearsCache() async throws {
+    @Test
+    func `Reset clears cached container`() async throws {
         guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else { return }
         guard TestHelpers.checkGPU() else { return }
 

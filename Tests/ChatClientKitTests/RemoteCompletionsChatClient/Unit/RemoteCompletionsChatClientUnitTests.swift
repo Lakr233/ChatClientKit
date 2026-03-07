@@ -10,10 +10,9 @@ import Foundation
 import ServerEvent
 import Testing
 
-@Suite("RemoteCompletionsChatClient Unit Tests")
 struct RemoteCompletionsChatClientUnitTests {
-    @Test("URL request omits Authorization header when API key is empty")
-    func makeURLRequest_withoutApiKey_omitsAuthorizationHeader() throws {
+    @Test
+    func `URL request omits Authorization header when API key is empty`() throws {
         let session = MockURLSession(result: .failure(TestError()))
 
         let dependencies = RemoteChatClientDependencies(
@@ -41,8 +40,8 @@ struct RemoteCompletionsChatClientUnitTests {
         #expect(request.value(forHTTPHeaderField: "cf-aig-authorization") == "Bearer gateway-token")
     }
 
-    @Test("Chat completion request when server returns error throws decoded error")
-    func chatCompletionRequest_whenServerReturnsError_throwsDecodedError() async throws {
+    @Test
+    func `Chat completion request when server returns error throws decoded error`() async throws {
         let errorJSON: [String: Any] = [
             "status": 401,
             "error": "unauthorized",
@@ -88,8 +87,8 @@ struct RemoteCompletionsChatClientUnitTests {
         }
     }
 
-    @Test("Streaming chat completion request emits reasoning and tool calls")
-    func streamingChatCompletionRequest_emitsReasoningAndToolCalls() async throws {
+    @Test
+    func `Streaming chat completion request emits reasoning and tool calls`() async throws {
         let session = MockCompletionsURLSession(result: .failure(CompletionsTestError()))
         let eventFactory = MockCompletionsEventSourceFactory()
 
@@ -150,8 +149,8 @@ struct RemoteCompletionsChatClientUnitTests {
         #expect(bodyJSON["stream"] as? Bool == true)
     }
 
-    @Test("Streaming chat completion forwards explicit reasoning field")
-    func streamingChatCompletionRequest_emitsExplicitReasoningField() async throws {
+    @Test
+    func `Streaming chat completion forwards explicit reasoning field`() async throws {
         let session = MockCompletionsURLSession(result: .failure(CompletionsTestError()))
         let eventFactory = MockCompletionsEventSourceFactory()
 

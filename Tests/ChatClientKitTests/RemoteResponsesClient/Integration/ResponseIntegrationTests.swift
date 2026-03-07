@@ -9,13 +9,11 @@
 import Foundation
 import Testing
 
-@Suite("RemoteResponsesChatClient OpenRouter Integration")
 struct ResponseIntegrationTests {
     @Test(
-        "Responses request returns content",
         .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
-    func responsesRequestReturnsContent() async throws {
+    func `Responses request returns content`() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
         let responseChunks = try await client.chatChunks {
@@ -33,10 +31,9 @@ struct ResponseIntegrationTests {
     }
 
     @Test(
-        "Responses streaming yields chunks",
         .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
-    func responsesStreamingYieldsChunks() async throws {
+    func `Responses streaming yields chunks`() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
         let stream = try await client.streamingChat {

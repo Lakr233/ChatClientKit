@@ -9,7 +9,7 @@
 import Foundation
 import Testing
 
-@Suite("MLX Chat Client Queue", .serialized)
+@Suite(.serialized)
 struct MLXChatClientQueueTests {
     actor AcquisitionTracker {
         var didAcquire = false
@@ -57,8 +57,8 @@ struct MLXChatClientQueueTests {
         }
     }
 
-    @Test("Queue blocks concurrent acquisitions until release")
-    func queue_blocksConcurrentAcquisitions() async throws {
+    @Test
+    func `Queue blocks concurrent acquisitions until release`() async throws {
         guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else { return }
 
         let queue = MLXChatClientQueue.shared
@@ -92,8 +92,8 @@ struct MLXChatClientQueueTests {
         #expect(acquiredAfterRelease == true)
     }
 
-    @Test("Queue allows only a single MLX inference at a time", .enabled(if: TestHelpers.checkGPU()))
-    func queue_allowsSingleInferenceAtATimeWithMLX() async throws {
+    @Test(.enabled(if: TestHelpers.checkGPU()))
+    func `Queue allows only a single MLX inference at a time`() async throws {
         guard #available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *) else { return }
         guard TestHelpers.checkGPU() else { return }
 

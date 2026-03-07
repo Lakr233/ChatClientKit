@@ -9,13 +9,11 @@
 import Foundation
 import Testing
 
-@Suite("RemoteResponsesChatClient Live Tests")
 struct RemoteResponsesChatClientLiveTests {
     @Test(
-        "Responses API returns content",
         .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
-    func responsesAPIProducesContent() async throws {
+    func `Responses API returns content`() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
         let responseChunks = try await client.chatChunks {
@@ -34,10 +32,9 @@ struct RemoteResponsesChatClientLiveTests {
     }
 
     @Test(
-        "Streaming responses API yields chunks",
         .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
-    func streamingResponsesAPIProducesChunks() async throws {
+    func `Streaming responses API yields chunks`() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
         let stream = try await client.streamingChat {
@@ -60,10 +57,9 @@ struct RemoteResponsesChatClientLiveTests {
     }
 
     @Test(
-        "Responses API respects developer instructions",
         .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
-    func responsesAPIHonorsDeveloperInstructions() async throws {
+    func `Responses API respects developer instructions`() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
         let responseChunks = try await client.chatChunks {
@@ -80,10 +76,9 @@ struct RemoteResponsesChatClientLiveTests {
     }
 
     @Test(
-        "Responses API handles multi-turn conversations",
         .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured),
     )
-    func responsesAPIHandlesMultiTurnContext() async throws {
+    func `Responses API handles multi-turn conversations`() async throws {
         let client = TestHelpers.makeOpenRouterResponsesClient()
 
         let responseChunks = try await client.chatChunks {

@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct ResponsesRequestBody: Sendable, Encodable {
+struct ResponsesRequestBody: Encodable {
     var model: String?
     let input: [InputItem]
     let instructions: String?
@@ -28,7 +28,7 @@ struct ResponsesRequestBody: Sendable, Encodable {
 }
 
 extension ResponsesRequestBody {
-    struct Tool: Sendable, Encodable {
+    struct Tool: Encodable {
         let type: String
         let name: String
         let description: String?
@@ -54,7 +54,7 @@ extension ResponsesRequestBody {
 }
 
 extension ResponsesRequestBody {
-    enum InputItem: Sendable, Encodable {
+    enum InputItem: Encodable {
         case message(role: String, content: [ContentPart])
         case functionCall(callID: String, name: String, arguments: String?)
         case functionCallOutput(callID: String, output: String)
@@ -91,7 +91,7 @@ extension ResponsesRequestBody {
 }
 
 extension ResponsesRequestBody {
-    enum ContentPart: Sendable, Encodable {
+    enum ContentPart: Encodable {
         case inputText(String)
         case outputText(String)
         case inputImage(url: URL, detail: ChatRequestBody.Message.ContentPart.ImageDetail?)
@@ -140,7 +140,7 @@ extension ResponsesRequestBody {
     }
 }
 
-struct ResponsesRequestTransformer: Sendable {
+struct ResponsesRequestTransformer {
     func makeRequestBody(
         from chatBody: ChatRequestBody,
         model: String,

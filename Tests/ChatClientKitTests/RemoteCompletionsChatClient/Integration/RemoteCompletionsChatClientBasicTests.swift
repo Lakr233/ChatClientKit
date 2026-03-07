@@ -9,10 +9,9 @@
 import Foundation
 import Testing
 
-@Suite("RemoteCompletionsChatClient Basic Tests")
 struct RemoteCompletionsChatClientBasicTests {
-    @Test("Non-streaming chat completion with text message", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func nonStreamingChatCompletion() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Non-streaming chat completion with text message`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let request = ChatRequestBody(messages: [
@@ -26,8 +25,8 @@ struct RemoteCompletionsChatClientBasicTests {
         #expect(text.lowercased().contains("hello") == true)
     }
 
-    @Test("Streaming chat completion with text message", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func streamingChatCompletion() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Streaming chat completion with text message`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let request = ChatRequestBody(messages: [
@@ -51,8 +50,8 @@ struct RemoteCompletionsChatClientBasicTests {
         #expect(fullContent.contains("1") || fullContent.contains("2") || fullContent.contains("3"))
     }
 
-    @Test("Chat completion with system message", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func chatCompletionWithSystemMessage() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Chat completion with system message`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let request = ChatRequestBody(messages: [
@@ -68,8 +67,8 @@ struct RemoteCompletionsChatClientBasicTests {
         }
     }
 
-    @Test("Chat completion with multiple messages", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func chatCompletionWithMultipleMessages() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Chat completion with multiple messages`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let request = ChatRequestBody(messages: [
@@ -87,8 +86,8 @@ struct RemoteCompletionsChatClientBasicTests {
         #expect(content.lowercased().contains("alice") == true)
     }
 
-    @Test("Chat completion with temperature parameter", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func chatCompletionWithTemperature() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Chat completion with temperature parameter`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let request = ChatRequestBody(
@@ -106,8 +105,8 @@ struct RemoteCompletionsChatClientBasicTests {
         }
     }
 
-    @Test("Chat completion with max tokens", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func chatCompletionWithMaxTokens() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Chat completion with max tokens`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let request = ChatRequestBody(
@@ -123,8 +122,8 @@ struct RemoteCompletionsChatClientBasicTests {
         #expect(content.isEmpty == false)
     }
 
-    @Test("Streaming chat completion collects all chunks", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func streamingCollectsAllChunks() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Streaming chat completion collects all chunks`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let request = ChatRequestBody(messages: [

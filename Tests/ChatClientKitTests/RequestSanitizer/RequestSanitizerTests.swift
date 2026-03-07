@@ -9,10 +9,9 @@
 import Foundation
 import Testing
 
-@Suite("RequestSanitizer tool-use flow")
 struct RequestSanitizerTests {
-    @Test("Inserts tool placeholder and trailing user text after tool call (anthropic/claude-opus-4.5)")
-    func sanitize_toolFlow_addsPlaceholders() {
+    @Test
+    func `Inserts tool placeholder and trailing user text after tool call (anthropic/claude-opus-4.5)`() {
         let toolCall = ChatRequestBody.Message.ToolCall(
             id: "tool-1",
             function: .init(name: "search_web", arguments: #"{"q":"hello"}"#),

@@ -49,7 +49,7 @@ public struct DefaultMLXModelLoader: MLXModelLoading {
 public actor MLXModelCoordinator: MLXModelCoordinating {
     public nonisolated static let shared = MLXModelCoordinator()
 
-    struct CacheKey: Equatable, Sendable {
+    struct CacheKey: Equatable {
         let identifier: ModelConfiguration.Identifier
         let kind: MLXModelKind
     }

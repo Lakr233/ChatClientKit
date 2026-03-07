@@ -9,10 +9,9 @@
 import Foundation
 import Testing
 
-@Suite("RemoteCompletionsChatClient Audio Tests")
 struct RemoteCompletionsChatClientAudioTests {
-    @Test("Non-streaming chat completion with audio input", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func nonStreamingChatCompletionWithAudio() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Non-streaming chat completion with audio input`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let audioBase64 = TestHelpers.createTestAudioBase64(format: "wav")
@@ -30,8 +29,8 @@ struct RemoteCompletionsChatClientAudioTests {
         #expect(content.isEmpty == false)
     }
 
-    @Test("Streaming chat completion with audio input", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func streamingChatCompletionWithAudio() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Streaming chat completion with audio input`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let audioBase64 = TestHelpers.createTestAudioBase64(format: "wav")
@@ -55,8 +54,8 @@ struct RemoteCompletionsChatClientAudioTests {
         #expect(fullContent.isEmpty == false)
     }
 
-    @Test("Chat completion with audio and text", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func chatCompletionWithAudioAndText() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Chat completion with audio and text`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let audioBase64 = TestHelpers.createTestAudioBase64(format: "wav")
@@ -74,8 +73,8 @@ struct RemoteCompletionsChatClientAudioTests {
         #expect(content.isEmpty == false)
     }
 
-    @Test("Chat completion with audio in conversation", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func chatCompletionWithAudioInConversation() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Chat completion with audio in conversation`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let audioBase64 = TestHelpers.createTestAudioBase64(format: "wav")
@@ -95,8 +94,8 @@ struct RemoteCompletionsChatClientAudioTests {
         #expect(content.isEmpty == false)
     }
 
-    @Test("Streaming chat completion with audio and image", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func streamingChatCompletionWithAudioAndImage() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Streaming chat completion with audio and image`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let audioBase64 = TestHelpers.createTestAudioBase64(format: "wav")

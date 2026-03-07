@@ -36,10 +36,9 @@ private extension ChatCompletionChunk.Choice.Delta.ToolCall {
     }
 }
 
-@Suite("Apple Intelligence Function Tests")
 struct AppleIntelligenceFunctionTests {
-    @Test("Function initializer parses arguments")
-    func functionInitializerParsesArguments() {
+    @Test
+    func `Function initializer parses arguments`() {
         let json = #"{"query":"weather","count":3}"#
         let function = Function(name: "tool", arguments: json)
 
@@ -54,8 +53,8 @@ struct AppleIntelligenceFunctionTests {
         #expect(arguments["count"] as? Int == 3)
     }
 
-    @Test("Function initializer handles invalid JSON")
-    func functionInitializerHandlesInvalidJSON() {
+    @Test
+    func `Function initializer handles invalid JSON`() {
         let json = "{ invalid json"
         let function = Function(name: "tool", arguments: json)
 
@@ -64,8 +63,8 @@ struct AppleIntelligenceFunctionTests {
         #expect(function.parsedArguments == nil)
     }
 
-    @Test("Tool call initializer produces function call")
-    func toolCallInitializerProducesFunctionCall() {
+    @Test
+    func `Tool call initializer produces function call`() {
         let call = ToolCall(id: "call-id", functionName: "tool", argumentsJSON: #"{"value":42}"#)
 
         #expect(call.id == "call-id")
@@ -76,10 +75,9 @@ struct AppleIntelligenceFunctionTests {
     }
 }
 
-@Suite("Apple Intelligence Prompt Builder Tests")
 struct AppleIntelligencePromptBuilderTests {
-    @Test("makeInstructions aggregates persona and guidance")
-    func makeInstructionsAggregatesPersonaAndGuidance() {
+    @Test
+    func `makeInstructions aggregates persona and guidance`() {
         let messages: [ChatRequestBody.Message] = [
             .system(content: .text("Follow system instructions.")),
             .developer(content: .text("Developer wants structured output.")),
@@ -97,8 +95,8 @@ struct AppleIntelligencePromptBuilderTests {
         #expect(result.contains("Please respond in Markdown."))
     }
 
-    @Test("makePrompt prioritizes latest user message")
-    func makePromptPrioritizesLatestUserMessage() {
+    @Test
+    func `makePrompt prioritizes latest user message`() {
         let messages: [ChatRequestBody.Message] = [
             .user(content: .text("First question")),
             .assistant(content: .text("First answer")),
@@ -116,11 +114,10 @@ struct AppleIntelligencePromptBuilderTests {
     }
 }
 
-@Suite("Apple Intelligence Tool Proxy Tests")
 struct AppleIntelligenceToolProxyTests {
-    @Test("Tool proxy captures invocation")
+    @Test
     @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
-    func toolProxyCapturesInvocation() async throws {
+    func `Tool proxy captures invocation`() async throws {
         let proxy = AppleIntelligenceToolProxy(
             name: "lookupWeather",
             description: "Fetch latest weather info.",
@@ -139,11 +136,10 @@ struct AppleIntelligenceToolProxyTests {
     }
 }
 
-@Suite("Apple Intelligence Integration Tests")
 struct AppleIntelligenceIntegrationTests {
-    @Test("Basic chat completion", .enabled(if: TestHelpers.isAppleIntelligenceAvailable))
+    @Test(.enabled(if: TestHelpers.isAppleIntelligenceAvailable))
     @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
-    func basicChatCompletion() async throws {
+    func `Basic chat completion`() async throws {
         let client = AppleIntelligenceChatClient()
         let body = ChatRequestBody(
             messages: [
@@ -162,9 +158,9 @@ struct AppleIntelligenceIntegrationTests {
         print("✅ Basic completion test passed. Response: \(text)")
     }
 
-    @Test("Streaming chat completion", .enabled(if: TestHelpers.isAppleIntelligenceAvailable))
+    @Test(.enabled(if: TestHelpers.isAppleIntelligenceAvailable))
     @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
-    func streamingChatCompletion() async throws {
+    func `Streaming chat completion`() async throws {
         let client = AppleIntelligenceChatClient()
         let body = ChatRequestBody(
             messages: [
@@ -194,9 +190,9 @@ struct AppleIntelligenceIntegrationTests {
         print("✅ Streaming test passed. Chunks: \(chunkCount), Content: \(accumulatedContent)")
     }
 
-    @Test("Tool call generation", .enabled(if: TestHelpers.isAppleIntelligenceAvailable))
+    @Test(.enabled(if: TestHelpers.isAppleIntelligenceAvailable))
     @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
-    func toolCallGeneration() async throws {
+    func `Tool call generation`() async throws {
         let client = AppleIntelligenceChatClient()
         let tools: [ChatRequestBody.Tool] = [
             .function(

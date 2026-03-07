@@ -9,7 +9,7 @@
 import Foundation
 
 class SessionDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
-    enum Event: Sendable {
+    enum Event {
         case didCompleteWithError(Error?)
         case didReceiveResponse(URLResponse, @Sendable (URLSession.ResponseDisposition) -> Void)
         case didReceiveData(Data)

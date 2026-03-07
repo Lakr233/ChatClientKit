@@ -9,10 +9,9 @@
 import Foundation
 import Testing
 
-@Suite("ChatRequest Builder Tests")
 struct ChatRequestBuilderTests {
-    @Test("Builder normalizes whitespace and produces canonical body")
-    func builder_normalizesWhitespace() throws {
+    @Test
+    func `Builder normalizes whitespace and produces canonical body`() throws {
         let request = ChatRequest {
             ChatRequest.model(" gpt-test ")
             ChatRequest.temperature(0.4)
@@ -63,8 +62,8 @@ struct ChatRequestBuilderTests {
         }
     }
 
-    @Test("Request builder allows composition via appendMessages")
-    func builder_supportsAppendMessages() throws {
+    @Test
+    func `Request builder allows composition via appendMessages`() throws {
         let request = ChatRequest {
             ChatRequest.model("demo")
             ChatRequest.messages {

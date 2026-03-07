@@ -9,10 +9,9 @@
 import Foundation
 import Testing
 
-@Suite("RemoteCompletionsChatClient Image Tests")
 struct RemoteCompletionsChatClientImageTests {
-    @Test("Non-streaming chat completion with image input", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func nonStreamingChatCompletionWithImage() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Non-streaming chat completion with image input`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let imageURL = TestHelpers.createTestImageDataURL()
@@ -31,8 +30,8 @@ struct RemoteCompletionsChatClientImageTests {
         #expect(content.lowercased().contains("red") == true)
     }
 
-    @Test("Streaming chat completion with image input", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func streamingChatCompletionWithImage() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Streaming chat completion with image input`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let imageURL = TestHelpers.createTestImageDataURL()
@@ -56,8 +55,8 @@ struct RemoteCompletionsChatClientImageTests {
         #expect(fullContent.isEmpty == false)
     }
 
-    @Test("Image generation did decode image payload")
-    func imageGenerationDecodesImage() throws {
+    @Test
+    func `Image generation did decode image payload`() throws {
         let object = """
         {
             "id": "gen-1765022540-E8rFudi6QOQq2QjD1dJ7",
@@ -96,8 +95,8 @@ struct RemoteCompletionsChatClientImageTests {
         }
     }
 
-    @Test("Image generation returns image payload", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func imageGenerationProducesImage() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Image generation returns image payload`() async throws {
         let client = TestHelpers.makeOpenRouterImageClient()
 
         let request = ChatRequestBody(
@@ -119,8 +118,8 @@ struct RemoteCompletionsChatClientImageTests {
         }
     }
 
-    @Test("Chat completion with image and text", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func chatCompletionWithImageAndText() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Chat completion with image and text`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let imageURL = TestHelpers.createTestImageDataURL()
@@ -138,8 +137,8 @@ struct RemoteCompletionsChatClientImageTests {
         #expect(content.isEmpty == false)
     }
 
-    @Test("Chat completion with multiple images", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func chatCompletionWithMultipleImages() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Chat completion with multiple images`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let imageURL1 = TestHelpers.createTestImageDataURL(width: 100, height: 100)
@@ -159,8 +158,8 @@ struct RemoteCompletionsChatClientImageTests {
         #expect(content.isEmpty == false)
     }
 
-    @Test("Chat completion with image detail parameter", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func chatCompletionWithImageDetail() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Chat completion with image detail parameter`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let imageURL = TestHelpers.createTestImageDataURL()
@@ -178,8 +177,8 @@ struct RemoteCompletionsChatClientImageTests {
         #expect(content.isEmpty == false)
     }
 
-    @Test("Streaming chat completion with image in conversation", .enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
-    func streamingChatCompletionWithImageInConversation() async throws {
+    @Test(.enabled(if: TestHelpers.isOpenRouterAPIKeyConfigured))
+    func `Streaming chat completion with image in conversation`() async throws {
         let client = TestHelpers.makeOpenRouterClient()
 
         let imageURL = TestHelpers.createTestImageDataURL()

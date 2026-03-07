@@ -10,10 +10,9 @@ import Foundation
 import ServerEvent
 import Testing
 
-@Suite("RemoteResponsesChatClient Unit Tests")
 struct RemoteResponsesClientUnitTests {
-    @Test("Builds responses payload from chat request")
-    func makeURLRequest_buildsResponsesPayload() throws {
+    @Test
+    func `Builds responses payload from chat request`() throws {
         let session = MockURLSession(result: .failure(TestError()))
         let dependencies = RemoteClientDependencies(
             session: session,
@@ -81,8 +80,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(placeholderUser["role"] as? String == "user")
     }
 
-    @Test("Encodes tools using responses schema")
-    func makeURLRequest_encodesToolsWithFlatSchema() throws {
+    @Test
+    func `Encodes tools using responses schema`() throws {
         let session = MockURLSession(result: .failure(TestError()))
         let dependencies = RemoteClientDependencies(
             session: session,
@@ -148,8 +147,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(required == ["query"])
     }
 
-    @Test("Includes assistant tool calls in responses payload")
-    func makeURLRequest_includesAssistantToolCalls() throws {
+    @Test
+    func `Includes assistant tool calls in responses payload`() throws {
         let session = MockURLSession(result: .failure(TestError()))
         let dependencies = RemoteClientDependencies(
             session: session,
@@ -198,8 +197,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(tool["output"] as? String == "result text")
     }
 
-    @Test("Decodes function-only output into tool call choice")
-    func chatCompletionRequest_handlesFunctionOnlyOutput() throws {
+    @Test
+    func `Decodes function-only output into tool call choice`() throws {
         let responseJSON: [String: Any] = [
             "output": [
                 [
@@ -220,8 +219,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(tool.args == "{\"ready\":true}")
     }
 
-    @Test("Decodes multiple output items and keeps tool calls with their message")
-    func chatCompletionRequest_handlesMultipleOutputs() throws {
+    @Test
+    func `Decodes multiple output items and keeps tool calls with their message`() throws {
         let responseJSON: [String: Any] = [
             "id": "resp_2",
             "created_at": 1234,
@@ -263,8 +262,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(tool.name == "do_first")
     }
 
-    @Test("Decodes placeholders for unsupported modalities")
-    func chatCompletionRequest_emitsPlaceholders() throws {
+    @Test
+    func `Decodes placeholders for unsupported modalities`() throws {
         let responseJSON: [String: Any] = [
             "id": "resp_3",
             "created_at": 1234,
@@ -289,8 +288,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(content.contains("diagram"))
     }
 
-    @Test("Error extractor flags non-success string status")
-    func errorExtractor_flagsFailedStatus() throws {
+    @Test
+    func `Error extractor flags non-success string status`() throws {
         let payload: [String: Any] = [
             "status": "failed",
             "message": "boom",
@@ -303,8 +302,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(error?.localizedDescription.contains("boom") == true)
     }
 
-    @Test("Streaming emits text deltas and tool calls")
-    func streamingChatCompletion_emitsTextAndToolCalls() async throws {
+    @Test
+    func `Streaming emits text deltas and tool calls`() async throws {
         let events: [EventSource.EventType] = [
             .event(TestEvent(data: #"{"type":"response.output_item.added","output_index":0,"item":{"id":"msg_1","type":"message","role":"assistant","content":[]}}"#)),
             .event(TestEvent(data: #"{"type":"response.output_text.delta","item_id":"msg_1","output_index":0,"delta":"Hi"}"#)),
@@ -356,8 +355,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(bodyJSON["stream"] as? Bool == true)
     }
 
-    @Test("Streaming stop chunk does not duplicate final text")
-    func streamingChatCompletion_stopChunkNoText() async throws {
+    @Test
+    func `Streaming stop chunk does not duplicate final text`() async throws {
         let events: [EventSource.EventType] = [
             .event(TestEvent(data: #"{"type":"response.output_item.added","output_index":0,"item":{"id":"msg_1","type":"message","role":"assistant","content":[]}}"#)),
             .event(TestEvent(data: #"{"type":"response.output_text.delta","item_id":"msg_1","output_index":0,"delta":"Hi"}"#)),
@@ -396,8 +395,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(chunks.first?.textValue == "Hi")
     }
 
-    @Test("Streaming ignores content_part.done full text to avoid duplication")
-    func streamingChatCompletion_ignoresContentPartDone() async throws {
+    @Test
+    func `Streaming ignores content_part.done full text to avoid duplication`() async throws {
         let events: [EventSource.EventType] = [
             .event(TestEvent(data: #"{"type":"response.output_item.added","output_index":0,"item":{"id":"msg_1","type":"message","role":"assistant","content":[]}}"#)),
             .event(TestEvent(data: #"{"type":"response.output_text.delta","item_id":"msg_1","output_index":0,"delta":"Hi"}"#)),
@@ -441,8 +440,8 @@ struct RemoteResponsesClientUnitTests {
         }
     }
 
-    @Test("Streaming emits done text when no deltas")
-    func streamingChatCompletion_emitsDoneText() async throws {
+    @Test
+    func `Streaming emits done text when no deltas`() async throws {
         let events: [EventSource.EventType] = [
             .event(TestEvent(data: #"{"type":"response.output_item.added","output_index":0,"item":{"id":"msg_1","type":"message","role":"assistant","content":[]}}"#)),
             .event(TestEvent(data: #"{"type":"response.output_text.done","item_id":"msg_1","output_index":0,"text":"Hola"}"#)),
@@ -484,8 +483,8 @@ struct RemoteResponsesClientUnitTests {
         }
     }
 
-    @Test("Streaming emits error when response fails")
-    func streamingChatCompletion_handlesFailedEvent() async throws {
+    @Test
+    func `Streaming emits error when response fails`() async throws {
         let events: [EventSource.EventType] = [
             .event(TestEvent(data: #"{"type":"response.failed","response":{"status":"failed","error":{"message":"boom"}}}"#)),
             .closed,
@@ -519,8 +518,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(capturedError?.contains("boom") == true)
     }
 
-    @Test("Decodes refusal content with refusal finish reason")
-    func chatCompletionRequest_decodesRefusal() throws {
+    @Test
+    func `Decodes refusal content with refusal finish reason`() throws {
         let responseJSON: [String: Any] = [
             "id": "resp_refusal",
             "created_at": 1234,
@@ -543,8 +542,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(text == "I cannot help with that.")
     }
 
-    @Test("Decodes finish reasons for stop vs tool calls")
-    func chatCompletionRequest_setsFinishReasonVariants() throws {
+    @Test
+    func `Decodes finish reasons for stop vs tool calls`() throws {
         let stopJSON: [String: Any] = [
             "output": [
                 [
@@ -583,8 +582,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(ChatResponse(chunks: toolResponse).tools.first?.name == "do_next")
     }
 
-    @Test("Streaming emits refusal content with refusal finish reason")
-    func streamingChatCompletion_refusalDoneIncludesContent() async throws {
+    @Test
+    func `Streaming emits refusal content with refusal finish reason`() async throws {
         let events: [EventSource.EventType] = [
             .event(TestEvent(data: #"{"type":"response.output_item.added","output_index":0,"item":{"id":"msg_1","type":"message","role":"assistant","content":[]}}"#)),
             .event(TestEvent(data: #"{"type":"response.refusal.done","item_id":"msg_1","output_index":0,"refusal":"nope"}"#)),
@@ -624,8 +623,8 @@ struct RemoteResponsesClientUnitTests {
         #expect(refusalText == "nope")
     }
 
-    @Test("Streaming emits reasoning content from reasoning_text.done")
-    func streamingChatCompletion_reasoningDoneIncludesText() async throws {
+    @Test
+    func `Streaming emits reasoning content from reasoning_text.done`() async throws {
         let events: [EventSource.EventType] = [
             .event(TestEvent(data: #"{"type":"response.output_item.added","output_index":0,"item":{"id":"msg_1","type":"message","role":"assistant","content":[]}}"#)),
             .event(TestEvent(data: #"{"type":"response.reasoning_text.done","item_id":"msg_1","output_index":0,"text":"final chain"}"#)),

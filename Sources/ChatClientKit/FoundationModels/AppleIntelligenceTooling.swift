@@ -8,7 +8,7 @@ enum AppleIntelligenceToolError: Error {
 
 @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
 @Generable
-struct AppleIntelligenceToolArguments: Sendable, Equatable {
+struct AppleIntelligenceToolArguments: Equatable {
     @Guide(description: "Provide a JSON-encoded string representing the arguments for this tool call.")
     var payload: String
 }

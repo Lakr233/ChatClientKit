@@ -31,7 +31,7 @@ public struct RemoteCompletionsChatErrorExtractor: Sendable {
 
         if let status = dictionary["status"] as? String {
             let normalizedStatus = status.lowercased()
-            let successStatus: Set<String> = ["succeeded", "completed", "success", "incomplete", "in_progress", "queued"]
+            let successStatus: Set = ["succeeded", "completed", "success", "incomplete", "in_progress", "queued"]
             if !successStatus.contains(normalizedStatus) {
                 let message = extractMessage(in: dictionary) ?? "Server returns an error status: \(status)"
                 return NSError(
