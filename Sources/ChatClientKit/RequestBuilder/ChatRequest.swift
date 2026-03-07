@@ -67,7 +67,7 @@ extension ChatRequest: ChatRequestConvertible {
 // MARK: - Cache Identifier
 
 public extension ChatRequest {
-    struct CacheIdentifier: Hashable {
+    struct CacheIdentifier: Sendable, Hashable {
         public let rawValue: String
 
         init(request: ChatRequest) {

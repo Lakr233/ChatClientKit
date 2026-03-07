@@ -8,7 +8,7 @@
 import Foundation
 import ServerEvent
 
-struct RemoteCompletionsChatStreamProcessor {
+struct RemoteCompletionsChatStreamProcessor: Sendable {
     let eventSourceFactory: EventSourceProducing
     let chunkDecoder: JSONDecoding
     let errorExtractor: RemoteCompletionsChatErrorExtractor

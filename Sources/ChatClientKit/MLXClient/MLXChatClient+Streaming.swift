@@ -149,7 +149,7 @@ extension MLXChatClient {
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-struct ChunkDecodeResult {
+struct ChunkDecodeResult: Sendable {
     let chunk: ChatCompletionChunk?
     let shouldStop: Bool
 }

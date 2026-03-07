@@ -28,7 +28,7 @@ struct ResponsesRequestBody: Encodable {
 }
 
 extension ResponsesRequestBody {
-    struct Tool: Encodable {
+    struct Tool: Sendable, Encodable {
         let type: String
         let name: String
         let description: String?
@@ -140,7 +140,7 @@ extension ResponsesRequestBody {
     }
 }
 
-struct ResponsesRequestTransformer {
+struct ResponsesRequestTransformer: Sendable {
     func makeRequestBody(
         from chatBody: ChatRequestBody,
         model: String,
