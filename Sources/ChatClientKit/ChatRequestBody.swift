@@ -35,7 +35,7 @@ public struct ChatRequestBody: Sendable, Encodable {
 }
 
 public extension ChatRequestBody {
-    enum Message: Encodable {
+    enum Message: Sendable, Encodable {
         case assistant(
             content: MessageContent<String, [String]>? = nil,
             toolCalls: [ToolCall]? = nil,
@@ -123,7 +123,7 @@ public extension ChatRequestBody.Message {
 }
 
 public extension ChatRequestBody.Message {
-    enum ContentPart: Encodable {
+    enum ContentPart: Sendable, Encodable {
         case text(String)
 
         /// Data URL image content with optional detail hint.
@@ -178,7 +178,7 @@ public extension ChatRequestBody.Message {
 }
 
 public extension ChatRequestBody.Message.ContentPart {
-    enum ImageDetail: String, Encodable {
+    enum ImageDetail: String, Sendable, Encodable {
         case auto
         case low
         case high
@@ -186,7 +186,7 @@ public extension ChatRequestBody.Message.ContentPart {
 }
 
 public extension ChatRequestBody.Message {
-    struct ToolCall: Encodable {
+    struct ToolCall: Sendable, Encodable {
         let id: String
         let type = "function"
         let function: Function
@@ -202,7 +202,7 @@ public extension ChatRequestBody.Message {
 }
 
 public extension ChatRequestBody.Message.ToolCall {
-    struct Function: Encodable {
+    struct Function: Sendable, Encodable {
         public let name: String
 
         public let arguments: String?
@@ -218,7 +218,7 @@ public extension ChatRequestBody.Message.ToolCall {
 }
 
 public extension ChatRequestBody {
-    enum Tool: Encodable {
+    enum Tool: Sendable, Encodable {
         case function(
             name: String,
             description: String?,

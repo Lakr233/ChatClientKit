@@ -6,7 +6,7 @@ public struct ChatCompletionChunk: Sendable, Decodable {
 }
 
 public extension ChatCompletionChunk {
-    struct Choice: Decodable {
+    struct Choice: Sendable, Decodable {
         public let delta: Delta
 
         public let index: Int?
@@ -24,7 +24,7 @@ public extension ChatCompletionChunk {
 }
 
 public extension ChatCompletionChunk.Choice {
-    struct Delta: Decodable {
+    struct Delta: Sendable, Decodable {
         public let content: String?
         public let reasoning: String?
         public let reasoningContent: String?
@@ -60,7 +60,7 @@ public extension ChatCompletionChunk.Choice {
 }
 
 public extension ChatCompletionChunk.Choice.Delta {
-    struct ToolCall: Decodable {
+    struct ToolCall: Sendable, Decodable {
         public let index: Int?
         public let id: String?
         public let type: String?
@@ -69,7 +69,7 @@ public extension ChatCompletionChunk.Choice.Delta {
 }
 
 public extension ChatCompletionChunk.Choice.Delta.ToolCall {
-    struct Function: Decodable {
+    struct Function: Sendable, Decodable {
         public let name: String?
         public let arguments: String?
     }
