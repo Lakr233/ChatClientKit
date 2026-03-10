@@ -10,7 +10,6 @@ import Foundation
 enum SanitizationRule: CaseIterable {
     case mergeSystemMessages
     case ensureToolResponses
-    case ensureTrailingUserText
 
     static func applyAll(on messages: [ChatRequestBody.Message]) -> [ChatRequestBody.Message] {
         var mutableMessages = messages
@@ -26,8 +25,6 @@ enum SanitizationRule: CaseIterable {
             messages = MessageSanitizer.mergeSystemMessages(messages)
         case .ensureToolResponses:
             MessageSanitizer.ensureToolResponses(messages: &messages)
-        case .ensureTrailingUserText:
-            MessageSanitizer.ensureTrailingUserText(messages: &messages)
         }
     }
 }

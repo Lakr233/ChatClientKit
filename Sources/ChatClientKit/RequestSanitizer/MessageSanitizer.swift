@@ -52,11 +52,6 @@ enum MessageSanitizer {
         messages = sanitized
     }
 
-    static func ensureTrailingUserText(messages: inout [ChatRequestBody.Message]) {
-        guard !messages.lastIsUserText else { return }
-        messages.append(.user(content: .text(placeholderText)))
-    }
-
     static func mergeSystemMessages(_ messages: [ChatRequestBody.Message]) -> [ChatRequestBody.Message] {
         var systemSegments: [String] = []
         var systemName: String?
