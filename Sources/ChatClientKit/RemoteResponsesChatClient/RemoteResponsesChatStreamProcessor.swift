@@ -8,7 +8,7 @@
 import Foundation
 import ServerEvent
 
-struct RemoteResponsesChatStreamProcessor: Sendable {
+struct RemoteResponsesChatStreamProcessor {
     let eventSourceFactory: EventSourceProducing
     let chunkDecoder: JSONDecoding
     let errorExtractor: RemoteResponsesChatErrorExtractor
@@ -122,7 +122,7 @@ struct RemoteResponsesChatStreamProcessor: Sendable {
 }
 
 extension RemoteResponsesChatStreamProcessor {
-    struct OutputItemMetadata: Sendable {
+    struct OutputItemMetadata {
         let role: String
         let outputIndex: Int?
     }
@@ -303,7 +303,7 @@ extension RemoteResponsesChatStreamProcessor {
     }
 }
 
-struct ResponsesStreamEvent: Sendable, Decodable {
+struct ResponsesStreamEvent: Decodable {
     enum Kind: String {
         case outputTextDelta = "response.output_text.delta"
         case outputTextDone = "response.output_text.done"

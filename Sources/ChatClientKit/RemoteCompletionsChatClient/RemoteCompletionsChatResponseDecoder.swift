@@ -1,6 +1,6 @@
 import Foundation
 
-struct RemoteCompletionsChatResponseDecoder: Sendable {
+struct RemoteCompletionsChatResponseDecoder {
     let decoder: JSONDecoding
 
     init(
@@ -35,11 +35,11 @@ struct RemoteCompletionsChatResponseDecoder: Sendable {
 
 // MARK: - Completions DTOs
 
-struct CompletionsResponse: Sendable, Decodable {
+struct CompletionsResponse: Decodable {
     let choices: [CompletionsChoice]?
 }
 
-struct CompletionsChoice: Sendable, Decodable {
+struct CompletionsChoice: Decodable {
     let message: CompletionsMessage?
 
     enum CodingKeys: String, CodingKey {
@@ -47,7 +47,7 @@ struct CompletionsChoice: Sendable, Decodable {
     }
 }
 
-struct CompletionsMessage: Sendable, Decodable {
+struct CompletionsMessage: Decodable {
     let content: String?
     let toolCalls: [ChatCompletionChunk.Choice.Delta.ToolCall]?
     let images: [CompletionImage]?

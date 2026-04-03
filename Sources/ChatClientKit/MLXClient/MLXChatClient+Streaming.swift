@@ -10,7 +10,6 @@ import Foundation
 @preconcurrency import MLXLLM
 @preconcurrency import MLXLMCommon
 @preconcurrency import MLXVLM
-import Tokenizers
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 extension MLXChatClient {
@@ -149,7 +148,7 @@ extension MLXChatClient {
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-struct ChunkDecodeResult: Sendable {
+struct ChunkDecodeResult {
     let chunk: ChatCompletionChunk?
     let shouldStop: Bool
 }
@@ -164,7 +163,7 @@ struct ChunkDecoder {
         isReasoning: inout Bool,
         shouldRemoveLeadingWhitespace: inout Bool,
     ) -> ChunkDecodeResult {
-        var text = context.tokenizer.decode(tokens: tokens)
+        var text = context.tokenizer.decode(tokenIds: tokens)
         let previousLength = latestOutputLength
         defer { latestOutputLength = text.count }
 
@@ -202,7 +201,7 @@ struct ChunkDecoder {
 
     func toggleReasoningIfNeeded(lastToken: Int?, isReasoning: inout Bool) -> Bool {
         guard let lastToken else { return false }
-        let text = context.tokenizer.decode(tokens: [lastToken]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = context.tokenizer.decode(tokenIds: [lastToken]).trimmingCharacters(in: .whitespacesAndNewlines)
         if !isReasoning, text == ChatClientConstants.reasoningDecoderBegin {
             logger.info("starting reasoning with token \(text)")
             isReasoning = true

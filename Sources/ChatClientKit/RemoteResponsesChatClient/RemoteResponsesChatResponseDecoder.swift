@@ -1,6 +1,6 @@
 import Foundation
 
-struct RemoteResponsesChatResponseDecoder: Sendable {
+struct RemoteResponsesChatResponseDecoder {
     let decoder: JSONDecoding
 
     init(decoder: JSONDecoding = JSONDecoderWrapper()) {
@@ -13,7 +13,7 @@ struct RemoteResponsesChatResponseDecoder: Sendable {
     }
 }
 
-struct ResponsesAPIResponse: Sendable, Decodable {
+struct ResponsesAPIResponse: Decodable {
     let id: String?
     let createdAt: Double?
     let model: String?
@@ -66,7 +66,7 @@ struct ResponsesAPIResponse: Sendable, Decodable {
     }
 }
 
-struct ResponsesOutputItem: Sendable, Decodable {
+struct ResponsesOutputItem: Decodable {
     let id: String?
     let type: String?
     let role: String?
@@ -101,7 +101,7 @@ struct ResponsesOutputItem: Sendable, Decodable {
     }
 }
 
-struct ResponsesContentPart: Sendable, Decodable {
+struct ResponsesContentPart: Decodable {
     let type: String
     let text: String?
 }
@@ -156,7 +156,7 @@ extension ResponsesContentPart {
     }
 }
 
-struct ResponsesErrorPayload: Sendable, Decodable {
+struct ResponsesErrorPayload: Decodable {
     let code: String?
     let message: String?
     let param: String?
