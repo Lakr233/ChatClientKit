@@ -20,12 +20,16 @@ extension MLXChatClient {
         var userInput = userInput(body: body)
         let generateParameters = generateParameters(body: body)
         let container = try await loadContainer(adjusting: &userInput)
-        let lockedInput = userInput
         let toolSpecs = userInput.tools
-        return try await container.perform { context in
+        return try await container.perform(nonSendable: userInput) { context, lockedInput in
             let input = try await context.processor.prepare(input: lockedInput)
 
             let toolCallFormat = context.configuration.toolCallFormat ?? .json
+
+            // Transfer values into the stream closure to avoid sending-closure data race warnings.
+            // These values are only accessed within the detached task — no concurrent use.
+            nonisolated(unsafe) let streamInput = input
+            nonisolated(unsafe) let streamContext = context
 
             return AsyncThrowingStream { continuation in
                 let workerTask = Task.detached(priority: .userInitiated) {
@@ -40,14 +44,14 @@ extension MLXChatClient {
                     var latestOutputLength = 0
                     var isReasoning = false
                     var shouldRemoveLeadingWhitespace = true
-                    var decoder = ChunkDecoder(context: context)
+                    var decoder = ChunkDecoder(context: streamContext)
                     var regularContentOutputLength = 0
 
                     do {
-                        let result = try MLXLMCommon.generate(
-                            input: input,
+                        let result = try legacyGenerate(
+                            input: streamInput,
                             parameters: generateParameters,
-                            context: context
+                            context: streamContext
                         ) { tokens in
                             let decodeResult = decoder.decode(
                                 tokens: tokens,
@@ -242,6 +246,18 @@ struct ChunkDecoder {
         let choice: ChatCompletionChunk.Choice = .init(delta: delta)
         return .init(choices: [choice])
     }
+}
+
+/// Wrapper to suppress deprecation warning. The callback-based generate API is
+/// intentionally used because the AsyncStream replacement doesn't expose individual
+/// token IDs needed by ChunkDecoder for reasoning token detection (<think>/<\/think>).
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
+@available(*, deprecated, message: "intentional wrapper for deprecated MLXLMCommon.generate")
+private func legacyGenerate(
+    input: LMInput, parameters: GenerateParameters, context: ModelContext,
+    didGenerate: ([Int]) -> GenerateDisposition
+) throws -> GenerateResult {
+    try MLXLMCommon.generate(input: input, parameters: parameters, context: context, didGenerate: didGenerate)
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
