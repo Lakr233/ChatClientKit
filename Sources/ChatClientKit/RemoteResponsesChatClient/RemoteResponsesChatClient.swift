@@ -6,6 +6,7 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
     public let baseURL: String?
     public let path: String?
     public let apiKey: String?
+    public let requestProfile: ResponsesRequestProfile
 
     public enum Error: Swift.Error {
         case invalidURL
@@ -32,7 +33,8 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
         path: String? = nil,
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
-        additionalBodyField: [String: Any] = [:]
+        additionalBodyField: [String: Any] = [:],
+        requestProfile: ResponsesRequestProfile = .standard
     ) {
         self.init(
             model: model,
@@ -41,6 +43,7 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
             apiKey: apiKey,
             additionalHeaders: additionalHeaders,
             additionalBodyField: additionalBodyField,
+            requestProfile: requestProfile,
             dependencies: .live
         )
     }
@@ -52,6 +55,7 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
         apiKey: String? = nil,
         additionalHeaders: [String: String] = [:],
         additionalBodyField: [String: Any] = [:],
+        requestProfile: ResponsesRequestProfile = .standard,
         dependencies: RemoteClientDependencies
     ) {
         self.model = model
@@ -60,6 +64,7 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
         self.apiKey = apiKey
         self.additionalHeaders = additionalHeaders
         self.additionalBodyField = additionalBodyField
+        self.requestProfile = requestProfile
         session = dependencies.session
         eventSourceFactory = dependencies.eventSourceFactory
         responseDecoderFactory = dependencies.responseDecoderFactory
@@ -95,7 +100,8 @@ extension RemoteResponsesChatClient {
             baseURL: baseURL,
             path: path,
             apiKey: apiKey,
-            additionalHeaders: additionalHeaders
+            additionalHeaders: additionalHeaders,
+            requestProfile: requestProfile
         )
     }
 

@@ -196,6 +196,53 @@ struct RemoteResponsesClientUnitTests {
     }
 
     @Test
+    func `Codex request profile matches Cherry harness instructions`() throws {
+        let session = MockURLSession(result: .failure(TestError()))
+        let dependencies = RemoteClientDependencies(
+            session: session,
+            eventSourceFactory: DefaultEventSourceFactory(),
+            responseDecoderFactory: { JSONDecoderWrapper() },
+            chunkDecoderFactory: { JSONDecoderWrapper() },
+            errorExtractor: RemoteResponsesErrorExtractor(),
+            reasoningParser: CompletionReasoningDecoder(),
+            requestSanitizer: RequestSanitizer()
+        )
+
+        let client = RemoteResponsesChatClient(
+            model: "gpt-codex",
+            baseURL: "https://chatgpt.com",
+            path: "/backend-api/codex/responses",
+            apiKey: "token",
+            requestProfile: .codex,
+            dependencies: dependencies
+        )
+
+        let body = ChatRequestBody(
+            messages: [
+                .system(content: .text("Respect the repo conventions.")),
+                .user(content: .text("Ship the patch.")),
+            ],
+            maxCompletionTokens: 256,
+            temperature: 0.4
+        )
+
+        let request = try client.makeURLRequest(
+            body: client.resolve(body: body, stream: false)
+        )
+        let bodyData = try #require(request.httpBody)
+        let json = try #require(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
+
+        #expect(json["temperature"] == nil)
+        #expect(json["max_output_tokens"] == nil)
+        #expect(json["store"] as? Bool == false)
+
+        let instructions = try #require(json["instructions"] as? String)
+        #expect(instructions == ResponsesRequestProfile.codexHarnessInstructions)
+        #expect(instructions.contains("You are a coding agent running in the Codex CLI"))
+        #expect(instructions.contains("`apply_patch`"))
+    }
+
+    @Test
     func `Decodes function-only output into tool call choice`() throws {
         let responseJSON: [String: Any] = [
             "output": [
