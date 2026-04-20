@@ -196,7 +196,7 @@ struct RemoteResponsesClientUnitTests {
     }
 
     @Test
-    func `Codex request profile matches Cherry harness instructions`() throws {
+    func `FlowDown ChatClientKit preset applies Codex request shaping`() throws {
         let session = MockURLSession(result: .failure(TestError()))
         let dependencies = RemoteClientDependencies(
             session: session,
@@ -213,7 +213,15 @@ struct RemoteResponsesClientUnitTests {
             baseURL: "https://chatgpt.com",
             path: "/backend-api/codex/responses",
             apiKey: "token",
-            requestProfile: .codex,
+            additionalBodyField: [
+                FlowDownChatClientKitExtension.configurationKey: [
+                    "environments": [Any](),
+                    "request_modifiers": [
+                        FlowDownChatClientKitExtension.predefinedOAuthCodexRequestModifier,
+                    ],
+                    "response_modifiers": [String](),
+                ],
+            ],
             dependencies: dependencies
         )
 

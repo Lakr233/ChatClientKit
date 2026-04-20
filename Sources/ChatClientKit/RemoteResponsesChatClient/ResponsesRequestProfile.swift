@@ -9,7 +9,6 @@ import Foundation
 
 public enum ResponsesRequestProfile: String, Sendable {
     case standard
-    case codex
 
     static let codexHarnessInstructions = #"""
 You are a coding agent running in the Codex CLI, a terminal-based coding assistant. Codex CLI is an open source project led by OpenAI. You are expected to be precise, safe, and helpful.
@@ -341,41 +340,7 @@ If all steps are complete, ensure you call `update_plan` to mark all steps as `c
 
 """#
 
-    func makeRequestObject(from encodedBody: Data) throws -> [String: Any] {
-        guard var object = try JSONSerialization.jsonObject(with: encodedBody) as? [String: Any] else {
-            throw RemoteResponsesChatClient.Error.invalidData
-        }
-
-        switch self {
-        case .standard:
-            return object
-        case .codex:
-            sanitizeCodexPayload(&object)
-            return object
-        }
-    }
-}
-
-private extension ResponsesRequestProfile {
-    var codexUnsupportedFields: Set<String> {
-        [
-            "max_output_tokens",
-            "service_tier",
-            "temperature",
-            "text",
-            "text_formatting",
-            "top_p",
-            "truncation",
-            "user",
-        ]
-    }
-
-    func sanitizeCodexPayload(_ object: inout [String: Any]) {
-        codexUnsupportedFields.forEach { object.removeValue(forKey: $0) }
-
-        // ChatGPT's Codex backend persists conversations server-side by default.
-        // FlowDown should keep cloud models stateless unless a user opts into it explicitly.
-        object["store"] = false
-        object["instructions"] = Self.codexHarnessInstructions
+    var requestModifiers: [String] {
+        []
     }
 }

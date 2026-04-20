@@ -41,6 +41,66 @@ struct RemoteCompletionsChatClientUnitTests {
     }
 
     @Test
+    func `FlowDown ChatClientKit scripts can update completions headers and body`() throws {
+        let session = MockURLSession(result: .failure(TestError()))
+
+        let dependencies = RemoteChatClientDependencies(
+            session: session,
+            eventSourceFactory: DefaultEventSourceFactory(),
+            responseDecoderFactory: { JSONDecoderWrapper() },
+            chunkDecoderFactory: { JSONDecoderWrapper() },
+            errorExtractor: RemoteChatErrorExtractor(),
+            reasoningParser: CompletionReasoningDecoder(),
+            requestSanitizer: RequestSanitizer()
+        )
+
+        let client = RemoteCompletionsChatClient(
+            model: "gpt-test",
+            baseURL: "https://example.com",
+            path: "/v1/chat/completions",
+            apiKey: "token",
+            additionalBodyField: [
+                "foo": "bar",
+                FlowDownChatClientKitExtension.configurationKey: [
+                    "environments": [
+                        [
+                            "name": "requestPatch",
+                            "value": [
+                                "metadata": [
+                                    "mode": "codex",
+                                ],
+                            ],
+                        ],
+                        [
+                            "name": "traceHeader",
+                            "value": "trace-123",
+                        ],
+                    ],
+                    "request_modifiers": [
+                        "request.body.set(env.requestPatch);request.header.set(\"X-Trace\", env.traceHeader)",
+                    ],
+                    "response_modifiers": [String](),
+                ],
+            ],
+            dependencies: dependencies
+        )
+
+        let request = try client.makeURLRequest(
+            body: ChatRequestBody(messages: [.user(content: .text("Hello"))])
+        )
+
+        #expect(request.value(forHTTPHeaderField: "X-Trace") == "trace-123")
+
+        let bodyData = try #require(request.httpBody)
+        let json = try #require(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
+        #expect(json["foo"] as? String == "bar")
+        #expect(json[FlowDownChatClientKitExtension.configurationKey] == nil)
+
+        let metadata = try #require(json["metadata"] as? [String: Any])
+        #expect(metadata["mode"] as? String == "codex")
+    }
+
+    @Test
     func `Chat completion request when server returns error throws decoded error`() async throws {
         let errorJSON: [String: Any] = [
             "status": 401,

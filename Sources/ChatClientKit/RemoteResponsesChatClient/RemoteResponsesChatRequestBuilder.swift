@@ -12,7 +12,7 @@ struct RemoteResponsesRequestBuilder {
     let path: String?
     let apiKey: String?
     var additionalHeaders: [String: String]
-    let requestProfile: ResponsesRequestProfile
+    let customization: FlowDownChatClientKitCustomization
 
     let encoder: JSONEncoder
 
@@ -21,14 +21,14 @@ struct RemoteResponsesRequestBuilder {
         path: String?,
         apiKey: String?,
         additionalHeaders: [String: String],
-        requestProfile: ResponsesRequestProfile,
+        customization: FlowDownChatClientKitCustomization,
         encoder: JSONEncoder = JSONEncoder()
     ) {
         self.baseURL = baseURL
         self.path = path
         self.apiKey = apiKey
         self.additionalHeaders = additionalHeaders
-        self.requestProfile = requestProfile
+        self.customization = customization
         self.encoder = encoder
     }
 
@@ -74,12 +74,25 @@ struct RemoteResponsesRequestBuilder {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
-        var requestObject = try requestProfile.makeRequestObject(from: encoder.encode(body))
-        if !additionalField.isEmpty {
-            for (key, value) in additionalField {
-                requestObject[key] = value
-            }
+        guard var requestObject = try JSONSerialization.jsonObject(with: encoder.encode(body)) as? [String: Any] else {
+            throw RemoteResponsesChatClient.Error.invalidData
         }
+
+        for (key, value) in customization.forwardedBodyFields {
+            requestObject[key] = value
+        }
+        for (key, value) in additionalField where key != FlowDownChatClientKitExtension.configurationKey {
+            requestObject[key] = value
+        }
+
+        var mutableRequest = request
+        try FlowDownChatClientKitModifierRuntime(environments: customization.environments)
+            .applyRequestModifiers(
+                customization.requestModifiers,
+                to: &mutableRequest,
+                body: &requestObject
+            )
+        request = mutableRequest
         request.httpBody = try JSONSerialization.data(withJSONObject: requestObject, options: [])
 
         logger.debug("constructed responses request URL: \(url.absoluteString)")
