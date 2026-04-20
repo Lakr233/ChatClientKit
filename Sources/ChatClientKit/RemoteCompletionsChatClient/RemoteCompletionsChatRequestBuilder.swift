@@ -12,6 +12,7 @@ struct RemoteCompletionsChatRequestBuilder {
     let path: String?
     let apiKey: String?
     var additionalHeaders: [String: String]
+    let customization: FlowDownChatClientKitCustomization
 
     let encoder: JSONEncoder
 
@@ -20,12 +21,14 @@ struct RemoteCompletionsChatRequestBuilder {
         path: String?,
         apiKey: String?,
         additionalHeaders: [String: String],
+        customization: FlowDownChatClientKitCustomization,
         encoder: JSONEncoder = JSONEncoder()
     ) {
         self.baseURL = baseURL
         self.path = path
         self.apiKey = apiKey
         self.additionalHeaders = additionalHeaders
+        self.customization = customization
         self.encoder = encoder
     }
 
@@ -76,18 +79,28 @@ struct RemoteCompletionsChatRequestBuilder {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
-        if !additionalField.isEmpty {
-            var originalDictionary: [String: Any] = [:]
-            if let body = request.httpBody,
-               let dictionary = try JSONSerialization.jsonObject(with: body) as? [String: Any]
-            {
-                originalDictionary = dictionary
-            }
-            for (key, value) in additionalField {
-                originalDictionary[key] = value
-            }
-            request.httpBody = try JSONSerialization.data(withJSONObject: originalDictionary, options: [])
+        var originalDictionary: [String: Any] = [:]
+        if let body = request.httpBody,
+           let dictionary = try JSONSerialization.jsonObject(with: body) as? [String: Any]
+        {
+            originalDictionary = dictionary
         }
+        for (key, value) in customization.forwardedBodyFields {
+            originalDictionary[key] = value
+        }
+        for (key, value) in additionalField where key != FlowDownChatClientKitExtension.configurationKey {
+            originalDictionary[key] = value
+        }
+
+        var mutableRequest = request
+        try FlowDownChatClientKitModifierRuntime(environments: customization.environments)
+            .applyRequestModifiers(
+                customization.requestModifiers,
+                to: &mutableRequest,
+                body: &originalDictionary
+            )
+        request = mutableRequest
+        request.httpBody = try JSONSerialization.data(withJSONObject: originalDictionary, options: [])
 
         return request
     }

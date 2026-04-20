@@ -73,7 +73,8 @@ public final class RemoteCompletionsChatClient: ChatService {
         body: ChatRequestBody
     ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
         let requestBody = resolve(body: body, stream: true)
-        let request = try makeURLRequest(body: requestBody)
+        let customization = try resolveCustomization()
+        let request = try makeURLRequest(body: requestBody, customization: customization)
         let this = self
         logger.info("starting streaming request to model: \(this.model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
 
@@ -81,7 +82,9 @@ public final class RemoteCompletionsChatClient: ChatService {
             eventSourceFactory: eventSourceFactory,
             chunkDecoder: chunkDecoderFactory(),
             errorExtractor: errorExtractor,
-            reasoningParser: reasoningParser
+            reasoningParser: reasoningParser,
+            responseModifiers: customization.responseModifiers,
+            environments: customization.environments
         )
 
         return processor.stream(request: request) { [weak self] error in
@@ -90,17 +93,42 @@ public final class RemoteCompletionsChatClient: ChatService {
     }
 
     func makeRequestBuilder() -> RemoteCompletionsChatRequestBuilder {
-        RemoteCompletionsChatRequestBuilder(
+        let customization = try? resolveCustomization()
+        return RemoteCompletionsChatRequestBuilder(
             baseURL: baseURL,
             path: path,
             apiKey: apiKey,
-            additionalHeaders: additionalHeaders
+            additionalHeaders: additionalHeaders,
+            customization: customization ?? .init(
+                forwardedBodyFields: [:],
+                environments: [:],
+                requestModifiers: [],
+                responseModifiers: []
+            )
         )
     }
 
     func makeURLRequest(body: ChatRequestBody) throws -> URLRequest {
-        let builder = makeRequestBuilder()
+        let customization = try resolveCustomization()
+        return try makeURLRequest(body: body, customization: customization)
+    }
+
+    func makeURLRequest(
+        body: ChatRequestBody,
+        customization: FlowDownChatClientKitCustomization
+    ) throws -> URLRequest {
+        let builder = RemoteCompletionsChatRequestBuilder(
+            baseURL: baseURL,
+            path: path,
+            apiKey: apiKey,
+            additionalHeaders: additionalHeaders,
+            customization: customization
+        )
         return try builder.makeRequest(body: body, additionalField: additionalBodyField)
+    }
+
+    func resolveCustomization() throws -> FlowDownChatClientKitCustomization {
+        try FlowDownChatClientKitCustomization.resolve(from: additionalBodyField)
     }
 
     func resolve(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {

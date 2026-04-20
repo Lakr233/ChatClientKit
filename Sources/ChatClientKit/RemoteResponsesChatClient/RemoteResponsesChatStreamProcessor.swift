@@ -12,23 +12,31 @@ struct RemoteResponsesChatStreamProcessor {
     let eventSourceFactory: EventSourceProducing
     let chunkDecoder: JSONDecoding
     let errorExtractor: RemoteResponsesChatErrorExtractor
+    let responseModifiers: [String]
+    let environments: [String: Any]
 
     init(
         eventSourceFactory: EventSourceProducing = DefaultEventSourceFactory(),
         chunkDecoder: JSONDecoding = JSONDecoderWrapper(),
-        errorExtractor: RemoteResponsesChatErrorExtractor = RemoteResponsesChatErrorExtractor()
+        errorExtractor: RemoteResponsesChatErrorExtractor = RemoteResponsesChatErrorExtractor(),
+        responseModifiers: [String] = [],
+        environments: [String: Any] = [:]
     ) {
         self.eventSourceFactory = eventSourceFactory
         self.chunkDecoder = chunkDecoder
         self.errorExtractor = errorExtractor
+        self.responseModifiers = responseModifiers
+        self.environments = environments
     }
 
     func stream(
         request: URLRequest,
         collectError: @Sendable @escaping (Swift.Error) async -> Void
     ) -> AnyAsyncSequence<ChatResponseChunk> {
+        let responseModifiers = responseModifiers
+        let runtime = FlowDownChatClientKitModifierRuntime(environments: environments)
         let stream = AsyncStream<ChatResponseChunk> { continuation in
-            Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, request] in
+            Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, request, responseModifiers, runtime] in
                 var toolCollector = ResponsesToolCallCollector()
                 var outputMetadata: [String: OutputItemMetadata] = [:]
                 var streamedTextItemIDs: Set<String> = []
@@ -57,13 +65,25 @@ struct RemoteResponsesChatStreamProcessor {
                             continue
                         }
 
-                        if let decodeError = errorExtractor.extractError(from: data) {
+                        let payloadData: Data
+                        do {
+                            payloadData = try Self.modifyResponsePayloadIfNeeded(
+                                data,
+                                modifiers: responseModifiers,
+                                runtime: runtime
+                            )
+                        } catch {
+                            await collectError(error)
+                            continue
+                        }
+
+                        if let decodeError = errorExtractor.extractError(from: payloadData) {
                             await collectError(decodeError)
                             continue
                         }
 
                         do {
-                            let payload = try chunkDecoder.decode(ResponsesStreamEvent.self, from: data)
+                            let payload = try chunkDecoder.decode(ResponsesStreamEvent.self, from: payloadData)
 
                             if let statusError = payload.asStatusError() {
                                 await collectError(statusError)
@@ -76,7 +96,7 @@ struct RemoteResponsesChatStreamProcessor {
                                 continue
                             }
 
-                            if let chunk = handle(
+                            if let chunk = Self.handle(
                                 payload: payload,
                                 toolCollector: &toolCollector,
                                 outputMetadata: &outputMetadata,
@@ -119,6 +139,19 @@ struct RemoteResponsesChatStreamProcessor {
         }
         return stream.eraseToAnyAsyncSequence()
     }
+
+    private static func modifyResponsePayloadIfNeeded(
+        _ data: Data,
+        modifiers: [String],
+        runtime: FlowDownChatClientKitModifierRuntime
+    ) throws -> Data {
+        guard !modifiers.isEmpty else { return data }
+        guard var object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw FlowDownChatClientKitScriptError("Response modifiers require JSON object payloads.")
+        }
+        try runtime.applyResponseModifiers(modifiers, body: &object)
+        return try JSONSerialization.data(withJSONObject: object, options: [])
+    }
 }
 
 extension RemoteResponsesChatStreamProcessor {
@@ -127,7 +160,7 @@ extension RemoteResponsesChatStreamProcessor {
         let outputIndex: Int?
     }
 
-    func handle(
+    static func handle(
         payload: ResponsesStreamEvent,
         toolCollector: inout ResponsesToolCallCollector,
         outputMetadata: inout [String: OutputItemMetadata],
@@ -141,15 +174,15 @@ extension RemoteResponsesChatStreamProcessor {
             if let itemID = payload.itemID {
                 streamedTextItemIDs.insert(itemID)
             }
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: delta
             )
         case .outputTextDone:
-            let content = resolvedFinalText(from: payload, streamedTextItemIDs: &streamedTextItemIDs)
+            let content = Self.resolvedFinalText(from: payload, streamedTextItemIDs: &streamedTextItemIDs)
             guard content != nil else { return nil }
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: content
@@ -159,28 +192,28 @@ extension RemoteResponsesChatStreamProcessor {
             if let itemID = payload.itemID {
                 streamedTextItemIDs.insert(itemID)
             }
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 reasoning: delta
             )
         case .reasoningTextDone:
-            let content = resolvedFinalText(from: payload, streamedTextItemIDs: &streamedTextItemIDs)
+            let content = Self.resolvedFinalText(from: payload, streamedTextItemIDs: &streamedTextItemIDs)
             guard content != nil else { return nil }
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 reasoning: content
             )
         case .refusalDelta:
             guard let delta = payload.delta else { return nil }
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: delta
             )
         case .refusalDone:
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: payload.refusal ?? payload.text ?? payload.delta
@@ -229,7 +262,7 @@ extension RemoteResponsesChatStreamProcessor {
                 let summaryKey = "\(itemID)_summary_\(payload.summaryIndex ?? 0)"
                 streamedTextItemIDs.insert(summaryKey)
             }
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 reasoning: delta
@@ -242,7 +275,7 @@ extension RemoteResponsesChatStreamProcessor {
                 }
             }
             guard let text = payload.text, !text.isEmpty else { return nil }
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 reasoning: text
@@ -250,7 +283,7 @@ extension RemoteResponsesChatStreamProcessor {
         case .responseCompleted:
             guard !finishEmitted else { return nil }
             finishEmitted = true
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: nil
@@ -261,7 +294,7 @@ extension RemoteResponsesChatStreamProcessor {
         case .responseIncomplete:
             guard !finishEmitted else { return nil }
             finishEmitted = true
-            return makeChunk(
+            return Self.makeChunk(
                 payload: payload,
                 outputMetadata: outputMetadata,
                 content: nil
@@ -285,7 +318,7 @@ extension RemoteResponsesChatStreamProcessor {
         }
     }
 
-    func makeChunk(
+    static func makeChunk(
         payload: ResponsesStreamEvent,
         outputMetadata: [String: OutputItemMetadata],
         content: String? = nil,
@@ -303,7 +336,7 @@ extension RemoteResponsesChatStreamProcessor {
         return ChatCompletionChunk(choices: [choice])
     }
 
-    func resolvedFinalText(
+    static func resolvedFinalText(
         from payload: ResponsesStreamEvent,
         streamedTextItemIDs: inout Set<String>
     ) -> String? {

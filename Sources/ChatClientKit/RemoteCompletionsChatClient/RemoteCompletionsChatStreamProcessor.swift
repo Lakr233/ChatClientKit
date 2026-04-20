@@ -13,17 +13,23 @@ struct RemoteCompletionsChatStreamProcessor {
     let chunkDecoder: JSONDecoding
     let errorExtractor: RemoteCompletionsChatErrorExtractor
     let reasoningParser: CompletionReasoningDecoder
+    let responseModifiers: [String]
+    let environments: [String: Any]
 
     init(
         eventSourceFactory: EventSourceProducing = DefaultEventSourceFactory(),
         chunkDecoder: JSONDecoding = JSONDecoderWrapper(),
         errorExtractor: RemoteCompletionsChatErrorExtractor = RemoteCompletionsChatErrorExtractor(),
-        reasoningParser: CompletionReasoningDecoder = .init()
+        reasoningParser: CompletionReasoningDecoder = .init(),
+        responseModifiers: [String] = [],
+        environments: [String: Any] = [:]
     ) {
         self.eventSourceFactory = eventSourceFactory
         self.chunkDecoder = chunkDecoder
         self.errorExtractor = errorExtractor
         self.reasoningParser = reasoningParser
+        self.responseModifiers = responseModifiers
+        self.environments = environments
     }
 
     func stream(
@@ -34,9 +40,11 @@ struct RemoteCompletionsChatStreamProcessor {
         let chunkDecoder = chunkDecoder
         let errorExtractor = errorExtractor
         let reasoningParser = reasoningParser
+        let responseModifiers = responseModifiers
+        let runtime = FlowDownChatClientKitModifierRuntime(environments: environments)
 
         let stream = AsyncStream<ChatResponseChunk> { continuation in
-            Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, reasoningParser, request] in
+            Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, reasoningParser, request, responseModifiers, runtime] in
                 var canDecodeReasoningContent = true
                 var reducer = ReasoningStreamReducer(parser: reasoningParser)
                 let toolCallCollector = CompletionToolCollector()
@@ -63,8 +71,20 @@ struct RemoteCompletionsChatStreamProcessor {
                             continue
                         }
 
+                        let payloadData: Data
                         do {
-                            var response = try chunkDecoder.decode(ChatCompletionChunk.self, from: data)
+                            payloadData = try Self.modifyResponsePayloadIfNeeded(
+                                data,
+                                modifiers: responseModifiers,
+                                runtime: runtime
+                            )
+                        } catch {
+                            await collectError(error)
+                            continue
+                        }
+
+                        do {
+                            var response = try chunkDecoder.decode(ChatCompletionChunk.self, from: payloadData)
 
                             let reasoningContent = [
                                 response.choices.map(\.delta).compactMap(\.reasoning),
@@ -114,7 +134,7 @@ struct RemoteCompletionsChatStreamProcessor {
                             await collectError(error)
                         }
 
-                        if let decodeError = errorExtractor.extractError(from: data) {
+                        if let decodeError = errorExtractor.extractError(from: payloadData) {
                             await collectError(decodeError)
                         }
                     case .closed:
@@ -143,6 +163,19 @@ struct RemoteCompletionsChatStreamProcessor {
             }
         }
         return stream.eraseToAnyAsyncSequence()
+    }
+
+    private static func modifyResponsePayloadIfNeeded(
+        _ data: Data,
+        modifiers: [String],
+        runtime: FlowDownChatClientKitModifierRuntime
+    ) throws -> Data {
+        guard !modifiers.isEmpty else { return data }
+        guard var object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw FlowDownChatClientKitScriptError("Response modifiers require JSON object payloads.")
+        }
+        try runtime.applyResponseModifiers(modifiers, body: &object)
+        return try JSONSerialization.data(withJSONObject: object, options: [])
     }
 }
 
