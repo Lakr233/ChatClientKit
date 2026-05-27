@@ -72,8 +72,25 @@ public final class RemoteCompletionsChatClient: ChatService {
     public func streamingChat(
         body: ChatRequestBody
     ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        try await streamingChat(body: body, scripting: nil)
+    }
+
+    public func streamingChat(
+        body: ChatRequestBody,
+        scripting: ChatScriptingHandle?
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
         let requestBody = resolve(body: body, stream: true)
-        let request = try makeURLRequest(body: requestBody)
+
+        // Build the per-request scripting runtime (if configured).
+        // The runner stays alive for the duration of this streamingChat
+        // call — one runner per request, never reused across requests.
+        let runtime = try makeScriptRuntime(body: requestBody, scripting: scripting)
+
+        let request = try makeURLRequest(
+            body: requestBody,
+            preProcessor: runtime?.preProcessor
+        )
+
         let this = self
         logger.info("starting streaming request to model: \(this.model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
 
@@ -81,7 +98,8 @@ public final class RemoteCompletionsChatClient: ChatService {
             eventSourceFactory: eventSourceFactory,
             chunkDecoder: chunkDecoderFactory(),
             errorExtractor: errorExtractor,
-            reasoningParser: reasoningParser
+            reasoningParser: reasoningParser,
+            postProcessor: runtime?.postProcessor
         )
 
         return processor.stream(request: request) { [weak self] error in
@@ -101,6 +119,31 @@ public final class RemoteCompletionsChatClient: ChatService {
     func makeURLRequest(body: ChatRequestBody) throws -> URLRequest {
         let builder = makeRequestBuilder()
         return try builder.makeRequest(body: body, additionalField: additionalBodyField)
+    }
+
+    func makeURLRequest(
+        body: ChatRequestBody,
+        preProcessor: PreProcessor?
+    ) throws -> URLRequest {
+        let builder = makeRequestBuilder()
+        return try builder.makeRequest(
+            body: body,
+            additionalField: additionalBodyField,
+            preProcessor: preProcessor
+        )
+    }
+
+    /// Build a fresh ScriptRunner + pre/post processors for this request.
+    /// Returns nil if scripting is not enabled.
+    private func makeScriptRuntime(
+        body: ChatRequestBody,
+        scripting: ChatScriptingHandle?
+    ) throws -> ScriptRuntime? {
+        guard let scripting, scripting.config.hasAnyStage else { return nil }
+        return try ScriptRuntime.make(
+            body: body,
+            handle: scripting
+        )
     }
 
     func resolve(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {

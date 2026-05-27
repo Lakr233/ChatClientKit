@@ -72,15 +72,34 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
     public func streamingChat(
         body: ChatRequestBody
     ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        try await streamingChat(body: body, scripting: nil)
+    }
+
+    public func streamingChat(
+        body: ChatRequestBody,
+        scripting: ChatScriptingHandle?
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
         let requestBody = resolve(body: body, stream: true)
-        let request = try makeURLRequest(body: requestBody)
+
+        let runtime: ScriptRuntime?
+        if let scripting, scripting.config.hasAnyStage {
+            runtime = try ScriptRuntime.make(body: body, handle: scripting)
+        } else {
+            runtime = nil
+        }
+
+        let request = try makeURLRequest(
+            body: requestBody,
+            preProcessor: runtime?.preProcessor
+        )
         let this = self
         logger.info("starting streaming responses request to model: \(this.model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
 
         let processor = RemoteResponsesChatStreamProcessor(
             eventSourceFactory: eventSourceFactory,
             chunkDecoder: chunkDecoderFactory(),
-            errorExtractor: errorExtractor
+            errorExtractor: errorExtractor,
+            postProcessor: runtime?.postProcessor
         )
 
         return processor.stream(request: request) { [weak self] error in
@@ -100,8 +119,19 @@ extension RemoteResponsesChatClient {
     }
 
     func makeURLRequest(body: ResponsesRequestBody) throws -> URLRequest {
+        try makeURLRequest(body: body, preProcessor: nil)
+    }
+
+    func makeURLRequest(
+        body: ResponsesRequestBody,
+        preProcessor: PreProcessor?
+    ) throws -> URLRequest {
         let builder = makeRequestBuilder()
-        return try builder.makeRequest(body: body, additionalField: additionalBodyField)
+        return try builder.makeRequest(
+            body: body,
+            additionalField: additionalBodyField,
+            preProcessor: preProcessor
+        )
     }
 
     func resolve(body: ChatRequestBody, stream: Bool) -> ResponsesRequestBody {

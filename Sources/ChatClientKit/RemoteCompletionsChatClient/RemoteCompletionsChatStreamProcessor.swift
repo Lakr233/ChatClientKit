@@ -13,17 +13,20 @@ struct RemoteCompletionsChatStreamProcessor {
     let chunkDecoder: JSONDecoding
     let errorExtractor: RemoteCompletionsChatErrorExtractor
     let reasoningParser: CompletionReasoningDecoder
+    let postProcessor: PostProcessor?
 
     init(
         eventSourceFactory: EventSourceProducing = DefaultEventSourceFactory(),
         chunkDecoder: JSONDecoding = JSONDecoderWrapper(),
         errorExtractor: RemoteCompletionsChatErrorExtractor = RemoteCompletionsChatErrorExtractor(),
-        reasoningParser: CompletionReasoningDecoder = .init()
+        reasoningParser: CompletionReasoningDecoder = .init(),
+        postProcessor: PostProcessor? = nil
     ) {
         self.eventSourceFactory = eventSourceFactory
         self.chunkDecoder = chunkDecoder
         self.errorExtractor = errorExtractor
         self.reasoningParser = reasoningParser
+        self.postProcessor = postProcessor
     }
 
     func stream(
@@ -34,18 +37,21 @@ struct RemoteCompletionsChatStreamProcessor {
         let chunkDecoder = chunkDecoder
         let errorExtractor = errorExtractor
         let reasoningParser = reasoningParser
+        let postProcessor = postProcessor
 
         let stream = AsyncStream<ChatResponseChunk> { continuation in
-            Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, reasoningParser, request] in
+            Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, reasoningParser, postProcessor, request] in
                 var canDecodeReasoningContent = true
                 var reducer = ReasoningStreamReducer(parser: reasoningParser)
                 let toolCallCollector = CompletionToolCollector()
                 var chunkCount = 0
                 var totalContentLength = 0
+                // post_process 连续失败计数(plan §7,Round 2 codex HIGH #7)
+                var consecutivePostProcessFailures = 0
 
                 let streamTask = eventSourceFactory.makeDataTask(for: request)
 
-                for await event in streamTask.events() {
+                eventLoop: for await event in streamTask.events() {
                     switch event {
                     case .open:
                         logger.info("connection was opened.")
@@ -53,16 +59,57 @@ struct RemoteCompletionsChatStreamProcessor {
                         logger.error("received an error: \(error)")
                         await collectError(error)
                     case let .event(event):
-                        guard let data = event.data?.data(using: .utf8) else {
+                        guard let rawLine = event.data,
+                              let data = rawLine.data(using: .utf8)
+                        else {
                             continue
                         }
-                        if let text = String(data: data, encoding: .utf8),
-                           text.lowercased() == "[done]".lowercased()
-                        {
+                        if rawLine.lowercased() == "[done]" {
                             logger.debug("received done from upstream")
                             continue
                         }
 
+                        // Path A: scripting active — let JS produce
+                        // (reasoning, content, tool_calls).
+                        if let postProcessor {
+                            let parsed = nativeParse(
+                                data: data,
+                                chunkDecoder: chunkDecoder,
+                                reasoningParser: reasoningParser,
+                                canDecodeReasoning: &canDecodeReasoningContent,
+                                reducer: &reducer
+                            )
+                            let out: PostProcessOutput
+                            do {
+                                out = try postProcessor.process(
+                                    parsed: parsed ?? PostProcessOutput(),
+                                    rawLine: rawLine
+                                )
+                            } catch {
+                                await collectError(error)
+                                consecutivePostProcessFailures += 1
+                                if consecutivePostProcessFailures >= 3 {
+                                    continuation.finish()
+                                    break eventLoop
+                                }
+                                continue
+                            }
+                            consecutivePostProcessFailures = 0
+                            chunkCount += 1
+                            if let r = out.reasoning, !r.isEmpty {
+                                continuation.yield(.reasoning(r))
+                            }
+                            if let c = out.content {
+                                totalContentLength += c.count
+                                continuation.yield(.text(c))
+                            }
+                            for t in out.toolCalls ?? [] {
+                                continuation.yield(.tool(ToolRequest(id: t.id, name: t.name, args: t.args)))
+                            }
+                            continue
+                        }
+
+                        // Path B: native (no scripting).
                         do {
                             var response = try chunkDecoder.decode(ChatCompletionChunk.self, from: data)
 
@@ -122,28 +169,89 @@ struct RemoteCompletionsChatStreamProcessor {
                     }
                 }
 
-                for leftover in reducer.flushRemaining() {
-                    for choice in leftover.choices {
-                        let reasoning = choice.delta.reasoningContent ?? choice.delta.reasoning
-                        if let reasoning, !reasoning.isEmpty {
-                            continuation.yield(.reasoning(reasoning))
-                        }
-                        if let content = choice.delta.content {
-                            continuation.yield(.text(content))
+                // Native-path-only: drain reducer + tool collector. With
+                // scripting enabled, the JS is responsible for emitting
+                // any leftover state in its own chunks.
+                if postProcessor == nil {
+                    for leftover in reducer.flushRemaining() {
+                        for choice in leftover.choices {
+                            let reasoning = choice.delta.reasoningContent ?? choice.delta.reasoning
+                            if let reasoning, !reasoning.isEmpty {
+                                continuation.yield(.reasoning(reasoning))
+                            }
+                            if let content = choice.delta.content {
+                                continuation.yield(.text(content))
+                            }
                         }
                     }
-                }
 
-                toolCallCollector.finalizeCurrentDeltaContent()
-                for call in toolCallCollector.pendingRequests {
-                    continuation.yield(.tool(call))
+                    toolCallCollector.finalizeCurrentDeltaContent()
+                    for call in toolCallCollector.pendingRequests {
+                        continuation.yield(.tool(call))
+                    }
+                    logger.info("streaming completed: received \(chunkCount) chunks, total content length: \(totalContentLength), tool calls: \(toolCallCollector.pendingRequests.count)")
+                } else {
+                    logger.info("streaming completed via scripting: received \(chunkCount) chunks, total content length: \(totalContentLength)")
                 }
-                logger.info("streaming completed: received \(chunkCount) chunks, total content length: \(totalContentLength), tool calls: \(toolCallCollector.pendingRequests.count)")
                 continuation.finish()
             }
         }
         return stream.eraseToAnyAsyncSequence()
     }
+}
+
+/// Decode one SSE-data chunk into a `PostProcessOutput` for inherit=true
+/// path. Returns nil if the chunk doesn't parse (silently swallowed —
+/// inherit=true scripts get an empty `parsed` and can fall back to
+/// `chatSession` or other state).
+private func nativeParse(
+    data: Data,
+    chunkDecoder: JSONDecoding,
+    reasoningParser _: CompletionReasoningDecoder,
+    canDecodeReasoning: inout Bool,
+    reducer: inout ReasoningStreamReducer
+) -> PostProcessOutput? {
+    guard var response = try? chunkDecoder.decode(ChatCompletionChunk.self, from: data) else {
+        return nil
+    }
+
+    let reasoningContent = [
+        response.choices.map(\.delta).compactMap(\.reasoning),
+        response.choices.map(\.delta).compactMap(\.reasoningContent),
+    ].flatMap(\.self).filter { !$0.isEmpty }
+    if canDecodeReasoning, !reasoningContent.isEmpty {
+        canDecodeReasoning = false
+    }
+    if canDecodeReasoning {
+        let contentSegments = response.choices.map(\.delta).compactMap(\.content)
+        reducer.process(contentSegments: contentSegments, into: &response)
+    }
+
+    var reasoning: String?
+    var content: String?
+    var toolCalls: [PostProcessOutput.ToolCall] = []
+    for choice in response.choices {
+        if let r = choice.delta.reasoningContent ?? choice.delta.reasoning, !r.isEmpty {
+            reasoning = (reasoning ?? "") + r
+        }
+        if let c = choice.delta.content {
+            content = (content ?? "") + c
+        }
+        for t in choice.delta.toolCalls ?? [] {
+            if let fn = t.function, let name = fn.name {
+                toolCalls.append(.init(
+                    id: t.id ?? UUID().uuidString,
+                    name: name,
+                    args: fn.arguments ?? "{}"
+                ))
+            }
+        }
+    }
+    return PostProcessOutput(
+        reasoning: reasoning,
+        content: content,
+        toolCalls: toolCalls.isEmpty ? nil : toolCalls
+    )
 }
 
 private func parseDataURL(_ text: String) -> (data: Data, mimeType: String?)? {

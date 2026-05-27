@@ -12,15 +12,18 @@ struct RemoteResponsesChatStreamProcessor {
     let eventSourceFactory: EventSourceProducing
     let chunkDecoder: JSONDecoding
     let errorExtractor: RemoteResponsesChatErrorExtractor
+    let postProcessor: PostProcessor?
 
     init(
         eventSourceFactory: EventSourceProducing = DefaultEventSourceFactory(),
         chunkDecoder: JSONDecoding = JSONDecoderWrapper(),
-        errorExtractor: RemoteResponsesChatErrorExtractor = RemoteResponsesChatErrorExtractor()
+        errorExtractor: RemoteResponsesChatErrorExtractor = RemoteResponsesChatErrorExtractor(),
+        postProcessor: PostProcessor? = nil
     ) {
         self.eventSourceFactory = eventSourceFactory
         self.chunkDecoder = chunkDecoder
         self.errorExtractor = errorExtractor
+        self.postProcessor = postProcessor
     }
 
     func stream(
@@ -28,7 +31,7 @@ struct RemoteResponsesChatStreamProcessor {
         collectError: @Sendable @escaping (Swift.Error) async -> Void
     ) -> AnyAsyncSequence<ChatResponseChunk> {
         let stream = AsyncStream<ChatResponseChunk> { continuation in
-            Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, request] in
+            Task.detached(priority: .userInitiated) { [collectError, eventSourceFactory, chunkDecoder, errorExtractor, postProcessor, request] in
                 var toolCollector = ResponsesToolCallCollector()
                 var outputMetadata: [String: OutputItemMetadata] = [:]
                 var streamedTextItemIDs: Set<String> = []
@@ -36,10 +39,11 @@ struct RemoteResponsesChatStreamProcessor {
                 var chunkCount = 0
                 var totalContentLength = 0
                 var ignoredToolEvents: Set<String> = []
+                var consecutivePostProcessFailures = 0
 
                 let streamTask = eventSourceFactory.makeDataTask(for: request)
 
-                for await event in streamTask.events() {
+                eventLoop: for await event in streamTask.events() {
                     switch event {
                     case .open:
                         logger.info("responses stream connection opened.")
@@ -47,12 +51,12 @@ struct RemoteResponsesChatStreamProcessor {
                         logger.error("received responses stream error: \(error.localizedDescription)")
                         await collectError(error)
                     case let .event(event):
-                        guard let data = event.data?.data(using: .utf8) else {
+                        guard let rawLine = event.data,
+                              let data = rawLine.data(using: .utf8)
+                        else {
                             continue
                         }
-                        if let text = String(data: data, encoding: .utf8),
-                           text.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "[DONE]"
-                        {
+                        if rawLine.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "[DONE]" {
                             logger.debug("received [DONE] from responses stream")
                             continue
                         }
@@ -62,6 +66,62 @@ struct RemoteResponsesChatStreamProcessor {
                             continue
                         }
 
+                        // Scripting active — let JS produce the chunk.
+                        if let postProcessor {
+                            // Best-effort native parse to a PostProcessOutput for
+                            // inherit=true path. On parse failure pass empty parsed.
+                            var parsed = PostProcessOutput()
+                            if let payload = try? chunkDecoder.decode(ResponsesStreamEvent.self, from: data) {
+                                if let chunk = handle(
+                                    payload: payload,
+                                    toolCollector: &toolCollector,
+                                    outputMetadata: &outputMetadata,
+                                    streamedTextItemIDs: &streamedTextItemIDs,
+                                    ignoredToolEvents: &ignoredToolEvents,
+                                    finishEmitted: &finishReasonEmitted
+                                ) {
+                                    var reasoning: String?
+                                    var content: String?
+                                    for choice in chunk.choices {
+                                        if let r = choice.delta.reasoningContent {
+                                            reasoning = (reasoning ?? "") + r
+                                        }
+                                        if let c = choice.delta.content {
+                                            content = (content ?? "") + c
+                                        }
+                                    }
+                                    parsed = PostProcessOutput(reasoning: reasoning, content: content, toolCalls: nil)
+                                }
+                            }
+
+                            let out: PostProcessOutput
+                            do {
+                                out = try postProcessor.process(parsed: parsed, rawLine: rawLine)
+                            } catch {
+                                await collectError(error)
+                                consecutivePostProcessFailures += 1
+                                if consecutivePostProcessFailures >= 3 {
+                                    continuation.finish()
+                                    break eventLoop
+                                }
+                                continue
+                            }
+                            consecutivePostProcessFailures = 0
+                            chunkCount += 1
+                            if let r = out.reasoning, !r.isEmpty {
+                                continuation.yield(.reasoning(r))
+                            }
+                            if let c = out.content {
+                                totalContentLength += c.count
+                                continuation.yield(.text(c))
+                            }
+                            for t in out.toolCalls ?? [] {
+                                continuation.yield(.tool(ToolRequest(id: t.id, name: t.name, args: t.args)))
+                            }
+                            continue
+                        }
+
+                        // Native path (no scripting).
                         do {
                             let payload = try chunkDecoder.decode(ResponsesStreamEvent.self, from: data)
 
@@ -109,11 +169,16 @@ struct RemoteResponsesChatStreamProcessor {
                     _ = hasTools // terminal reason only; no chunk emitted
                 }
 
-                let pendingCalls = toolCollector.finalizeRequests()
-                for call in pendingCalls {
-                    continuation.yield(.tool(call))
+                // Native-only tail: with scripting on, JS already drove tool yielding.
+                if postProcessor == nil {
+                    let pendingCalls = toolCollector.finalizeRequests()
+                    for call in pendingCalls {
+                        continuation.yield(.tool(call))
+                    }
+                    logger.info("responses streaming completed: received \(chunkCount) chunks, total content length: \(totalContentLength), tool calls: \(pendingCalls.count), ignored tool-like events: \(ignoredToolEvents.count)")
+                } else {
+                    logger.info("responses streaming completed via scripting: received \(chunkCount) chunks, total content length: \(totalContentLength)")
                 }
-                logger.info("responses streaming completed: received \(chunkCount) chunks, total content length: \(totalContentLength), tool calls: \(pendingCalls.count), ignored tool-like events: \(ignoredToolEvents.count)")
                 continuation.finish()
             }
         }
