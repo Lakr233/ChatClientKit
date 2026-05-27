@@ -101,6 +101,10 @@ struct RemoteResponsesChatStreamProcessor {
                                 await collectError(error)
                                 consecutivePostProcessFailures += 1
                                 if consecutivePostProcessFailures >= 3 {
+                                    // Round 1 impl-review MED #6 (responses): make terminal failure visible.
+                                    await collectError(ScriptingStreamError.consecutivePostProcessFailures(
+                                        count: consecutivePostProcessFailures, last: error
+                                    ))
                                     continuation.finish()
                                     break eventLoop
                                 }

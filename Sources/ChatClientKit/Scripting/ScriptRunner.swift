@@ -107,18 +107,17 @@ public final class ScriptRunner: @unchecked Sendable {
         decoding _: Output.Type = Output.self
     ) throws -> Output {
         let sem = DispatchSemaphore(value: 0)
-        var jsonResult: String?
-        var jsError: String?
+        // Round 1 codex BLOCKER #3 fix:Swift 6 strict concurrency rejects
+        // capturing `var` across `queue.async` boundaries. Use a lock-protected
+        // box; semaphore guarantees there's no actual concurrent access
+        // between the writer (queue.async closure) and reader (after sem.wait),
+        // but the type system needs us to be explicit.
+        let box = InvocationResultBox()
 
         queue.async { [self] in
             for (key, value) in bindings {
                 ctx.setObject(value, forKeyedSubscript: key as NSString)
             }
-            // Wrapper:
-            //   - Provides a local __result the user script assigns to.
-            //   - Returns JSON.stringify(__result). If __result is
-            //     undefined, JSON.stringify yields undefined as well —
-            //     we detect that on the Swift side.
             let wrapped = """
             (function() {
               var __result = undefined;
@@ -126,28 +125,31 @@ public final class ScriptRunner: @unchecked Sendable {
               ;return JSON.stringify(__result);
             })()
             """
+            var resultString: String?
+            var errorString: String?
             if let value = ctx.evaluateScript(wrapped),
                !value.isUndefined, !value.isNull
             {
-                jsonResult = value.toString()
+                resultString = value.toString()
             }
             if let exception = ctx.exception {
-                jsError = exception.toString()
+                errorString = exception.toString()
                 ctx.exception = nil
             }
+            box.set(json: resultString, error: errorString)
             sem.signal()
         }
 
         if sem.wait(timeout: .now() + invokeTimeout) == .timedOut {
             // Plan §1.8 — only way to free the queue is to kill the process.
-            // No `onTimeout` closure injection; would only mislead tests.
             fatalError(
                 "ChatClientKit script exceeded \(invokeTimeout) budget — developer must fix the script. Process is doomed."
             )
         }
 
-        if let err = jsError { throw ScriptRunnerError.jsException(err) }
-        guard let json = jsonResult, json != "undefined" else {
+        let snapshot = box.get()
+        if let err = snapshot.error { throw ScriptRunnerError.jsException(err) }
+        guard let json = snapshot.json, json != "undefined" else {
             throw ScriptRunnerError.noOutput
         }
         do {
@@ -186,5 +188,33 @@ public final class ScriptRunner: @unchecked Sendable {
           }
         })(globalThis["\(name)"]);
         """)
+    }
+}
+
+/// Lock-protected one-shot result holder used by `ScriptRunner.invoke`
+/// to ferry the JS evaluation outcome from the dedicated queue back to
+/// the caller. The semaphore guarantees happens-before, but Swift 6
+/// concurrency checking requires explicit thread safety on the type.
+private final class InvocationResultBox: @unchecked Sendable {
+    struct Snapshot {
+        let json: String?
+        let error: String?
+    }
+
+    private let lock = NSLock()
+    private var json: String?
+    private var error: String?
+
+    func set(json: String?, error: String?) {
+        lock.lock()
+        self.json = json
+        self.error = error
+        lock.unlock()
+    }
+
+    func get() -> Snapshot {
+        lock.lock()
+        defer { lock.unlock() }
+        return Snapshot(json: json, error: error)
     }
 }

@@ -89,6 +89,14 @@ struct RemoteCompletionsChatStreamProcessor {
                                 await collectError(error)
                                 consecutivePostProcessFailures += 1
                                 if consecutivePostProcessFailures >= 3 {
+                                    // Round 1 impl-review MED #6 fix:
+                                    // surface a clear terminal error so
+                                    // callers don't see partial output as
+                                    // success. AsyncStream can't throw, so
+                                    // we collect the error before finish().
+                                    await collectError(ScriptingStreamError.consecutivePostProcessFailures(
+                                        count: consecutivePostProcessFailures, last: error
+                                    ))
                                     continuation.finish()
                                     break eventLoop
                                 }

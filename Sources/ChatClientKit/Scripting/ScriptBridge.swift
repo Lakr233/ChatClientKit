@@ -69,10 +69,13 @@ public final class ScriptBridge: NSObject, ScriptBridgeExports, @unchecked Senda
         //    script (we're currently on the ScriptRunner's serial queue);
         //    otherwise we'd deadlock against ourselves.
         let sem = DispatchSemaphore(value: 0)
-        var caught: Error?
+        // Round 1 codex BLOCKER #4 fix:Swift 6 rejects capturing `var caught`
+        // across `DispatchQueue.async`. Use a lock-protected box; semaphore
+        // enforces happens-before but the type system needs explicit guard.
+        let box = WriteResultBox()
         DispatchQueue.global(qos: .userInitiated).async { [self] in
             do { try onWriteContext(json) }
-            catch { caught = error }
+            catch { box.set(error: error) }
             sem.signal()
         }
         if sem.wait(timeout: .now() + writeTimeout) == .timedOut {
@@ -80,7 +83,7 @@ public final class ScriptBridge: NSObject, ScriptBridgeExports, @unchecked Senda
                 "[CCK] saveContext write blocked > \(writeTimeout) — likely WCDB lock inversion in caller chain"
             )
         }
-        if let err = caught {
+        if let err = box.get() {
             let ctx = JSContext.current() ?? value.context
             ctx?.exception = JSValue(
                 newErrorFromMessage: "saveContext failed: \(err)",
@@ -126,5 +129,24 @@ public final class ScriptBridge: NSObject, ScriptBridgeExports, @unchecked Senda
             }
         }
         return mac.map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+/// Lock-protected one-shot result holder used by `ScriptBridge.saveContext`
+/// to ferry the write-back error from the global queue back to the JS thread.
+private final class WriteResultBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var error: Error?
+
+    func set(error: Error) {
+        lock.lock()
+        self.error = error
+        lock.unlock()
+    }
+
+    func get() -> Error? {
+        lock.lock()
+        defer { lock.unlock() }
+        return error
     }
 }
