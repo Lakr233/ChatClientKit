@@ -98,16 +98,18 @@ struct RemoteResponsesChatStreamProcessor {
                             do {
                                 out = try postProcessor.process(parsed: parsed, rawLine: rawLine)
                             } catch {
-                                await collectError(error)
                                 consecutivePostProcessFailures += 1
                                 if consecutivePostProcessFailures >= 3 {
-                                    // Round 1 impl-review MED #6 (responses): make terminal failure visible.
+                                    // Collect terminal error only after 3 consecutive
+                                    // failures; transient failures (1 or 2) are not
+                                    // collected so a later success doesn't surface them.
                                     await collectError(ScriptingStreamError.consecutivePostProcessFailures(
                                         count: consecutivePostProcessFailures, last: error
                                     ))
                                     continuation.finish()
                                     break eventLoop
                                 }
+                                logger.warning("post_process failed (attempt \(consecutivePostProcessFailures)/3), will retry: \(error.localizedDescription)")
                                 continue
                             }
                             consecutivePostProcessFailures = 0

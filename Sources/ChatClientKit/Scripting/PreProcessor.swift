@@ -38,7 +38,7 @@ struct PreProcessor {
             inputBody = .object([:])
         }
 
-        let bindings: [String: Any] = try [
+        let bindings: [String: Any] = [
             "headers": try toJSAny(inputHeaders),
             "body": try toJSAny(inputBody),
         ]

@@ -79,11 +79,14 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
         body: ChatRequestBody,
         scripting: ChatScriptingHandle?
     ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
-        let requestBody = resolve(body: body, stream: true)
+        // Resolve to the sanitized ChatRequestBody first so chatSession in JS
+        // reflects the same model/stream fields as the actual HTTP request.
+        let resolvedChat = sanitizeChat(body: body, stream: true)
+        let requestBody = requestTransformer.makeRequestBody(from: resolvedChat, model: model, stream: true)
 
         let runtime: ScriptRuntime?
         if let scripting, scripting.config.hasAnyStage {
-            runtime = try ScriptRuntime.make(body: body, handle: scripting)
+            runtime = try ScriptRuntime.make(body: resolvedChat, handle: scripting)
         } else {
             runtime = nil
         }
@@ -134,11 +137,18 @@ extension RemoteResponsesChatClient {
         )
     }
 
+    /// Merge adjacent assistant messages, set model/stream, and sanitize.
+    /// Returns the sanitized `ChatRequestBody` used both for `ScriptRuntime`
+    /// and as the source for `requestTransformer`.
+    func sanitizeChat(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {
+        var resolved = body.mergingAdjacentAssistantMessages()
+        resolved.model = model
+        resolved.stream = stream
+        return requestSanitizer.sanitize(resolved)
+    }
+
     func resolve(body: ChatRequestBody, stream: Bool) -> ResponsesRequestBody {
-        var requestBody = body.mergingAdjacentAssistantMessages()
-        requestBody.model = model
-        requestBody.stream = stream
-        let sanitized = requestSanitizer.sanitize(requestBody)
+        let sanitized = sanitizeChat(body: body, stream: stream)
         return requestTransformer.makeRequestBody(from: sanitized, model: model, stream: stream)
     }
 

@@ -113,9 +113,10 @@ public final class ScriptRunner: @unchecked Sendable {
         // between the writer (queue.async closure) and reader (after sem.wait),
         // but the type system needs us to be explicit.
         let box = InvocationResultBox()
+        let sendableBindings = SendableBindings(values: bindings)
 
-        queue.async { [self] in
-            for (key, value) in bindings {
+        queue.async { [self, sendableBindings] in
+            for (key, value) in sendableBindings.values {
                 ctx.setObject(value, forKeyedSubscript: key as NSString)
             }
             let wrapped = """
@@ -189,6 +190,10 @@ public final class ScriptRunner: @unchecked Sendable {
         })(globalThis["\(name)"]);
         """)
     }
+}
+
+private struct SendableBindings: @unchecked Sendable {
+    let values: [String: Any]
 }
 
 /// Lock-protected one-shot result holder used by `ScriptRunner.invoke`

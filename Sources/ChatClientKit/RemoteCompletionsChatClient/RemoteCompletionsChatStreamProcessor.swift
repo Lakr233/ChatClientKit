@@ -72,6 +72,12 @@ struct RemoteCompletionsChatStreamProcessor {
                         // Path A: scripting active — let JS produce
                         // (reasoning, content, tool_calls).
                         if let postProcessor {
+                            // Always surface provider-level errors so they
+                            // reach errorCollector even when scripting is on.
+                            if let decodeError = errorExtractor.extractError(from: data) {
+                                await collectError(decodeError)
+                            }
+
                             let parsed = nativeParse(
                                 data: data,
                                 chunkDecoder: chunkDecoder,
@@ -86,20 +92,18 @@ struct RemoteCompletionsChatStreamProcessor {
                                     rawLine: rawLine
                                 )
                             } catch {
-                                await collectError(error)
                                 consecutivePostProcessFailures += 1
                                 if consecutivePostProcessFailures >= 3 {
-                                    // Round 1 impl-review MED #6 fix:
-                                    // surface a clear terminal error so
-                                    // callers don't see partial output as
-                                    // success. AsyncStream can't throw, so
-                                    // we collect the error before finish().
+                                    // Collect terminal error only after 3 consecutive
+                                    // failures; transient failures (1 or 2) are not
+                                    // collected so a later success doesn't surface them.
                                     await collectError(ScriptingStreamError.consecutivePostProcessFailures(
                                         count: consecutivePostProcessFailures, last: error
                                     ))
                                     continuation.finish()
                                     break eventLoop
                                 }
+                                logger.warning("post_process failed (attempt \(consecutivePostProcessFailures)/3), will retry: \(error.localizedDescription)")
                                 continue
                             }
                             consecutivePostProcessFailures = 0
