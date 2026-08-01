@@ -33,6 +33,14 @@ struct RemoteCompletionsChatRequestBuilder {
         body: ChatRequestBody,
         additionalField: [String: Any]
     ) throws -> URLRequest {
+        try makeRequest(body: body, additionalField: additionalField, preProcessor: nil)
+    }
+
+    func makeRequest(
+        body: ChatRequestBody,
+        additionalField: [String: Any],
+        preProcessor: PreProcessor?
+    ) throws -> URLRequest {
         guard let baseURL else {
             logger.error("invalid base URL")
             throw RemoteCompletionsChatClient.Error.invalidURL
@@ -90,6 +98,12 @@ struct RemoteCompletionsChatRequestBuilder {
                 withJSONObject: originalDictionary,
                 options: [.sortedKeys]
             )
+        }
+
+        // pre_process script (if any) gets the last word — it may rewrite
+        // headers and body before URLSession sees the request.
+        if let preProcessor {
+            request = try preProcessor.apply(to: request)
         }
 
         return request
