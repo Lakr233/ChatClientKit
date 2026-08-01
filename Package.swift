@@ -15,7 +15,9 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift-lm/", branch: "main"),
-        .package(url: "https://github.com/DePasqualeOrg/swift-tokenizers.git", from: "0.3.2"),
+        // 0.5.0+ drops the pure-Swift backend for a Rust artifactbundle that has
+        // no Mac Catalyst slice, breaking Catalyst builds. Stay below 0.5.0.
+        .package(url: "https://github.com/DePasqualeOrg/swift-tokenizers.git", "0.3.2" ..< "0.5.0"),
     ],
     targets: [
         .target(
