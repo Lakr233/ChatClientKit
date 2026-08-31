@@ -5,6 +5,17 @@ public protocol ChatService: AnyObject, Sendable {
 
     func chat(body: ChatRequestBody) async throws -> ChatResponse
     func streamingChat(body: ChatRequestBody) async throws -> AnyAsyncSequence<ChatResponseChunk>
+
+    /// Scripting-aware entry point. Default implementation forwards to
+    /// `streamingChat(body:)` (i.e. scripting disabled). Conformers that
+    /// actually run the JavaScript hooks (`RemoteCompletionsChatClient`,
+    /// `RemoteResponsesChatClient`) override this. Local-inference
+    /// clients (MLX, Apple Intelligence) keep the default since they
+    /// don't issue network requests and `scripting` is not meaningful.
+    func streamingChat(
+        body: ChatRequestBody,
+        scripting: ChatScriptingHandle?
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk>
 }
 
 public extension ChatService {
@@ -23,6 +34,11 @@ public extension ChatService {
         return ChatResponse(chunks: chunks)
     }
 
+    func chat(body: ChatRequestBody, scripting: ChatScriptingHandle?) async throws -> ChatResponse {
+        let chunks: [ChatResponseChunk] = try await chatChunks(body: body, scripting: scripting)
+        return ChatResponse(chunks: chunks)
+    }
+
     func chat(_ request: some ChatRequestConvertible) async throws -> ChatResponse {
         try await chat(body: request.asChatRequestBody())
     }
@@ -30,8 +46,15 @@ public extension ChatService {
     // MARK: CHAT RESPONSE CHUNKS
 
     func chatChunks(body: ChatRequestBody) async throws -> [ChatResponseChunk] {
+        try await chatChunks(body: body, scripting: nil)
+    }
+
+    func chatChunks(
+        body: ChatRequestBody,
+        scripting: ChatScriptingHandle?
+    ) async throws -> [ChatResponseChunk] {
         var chunks: [ChatResponseChunk] = []
-        for try await chunk in try await streamingChat(body: body) {
+        for try await chunk in try await streamingChat(body: body, scripting: scripting) {
             chunks.append(chunk)
         }
         return chunks
@@ -48,6 +71,16 @@ public extension ChatService {
     }
 
     // MARK: STREAMING CHAT RESPONSE CHUNKS
+
+    /// Default implementation: forward to the no-scripting variant.
+    /// Override in clients that support scripting (RemoteCompletions /
+    /// RemoteResponses).
+    func streamingChat(
+        body: ChatRequestBody,
+        scripting _: ChatScriptingHandle?
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        try await streamingChat(body: body)
+    }
 
     func streamingChat(
         @ChatRequestBuilder _ builder: @Sendable () -> [ChatRequest.BuildComponent]
