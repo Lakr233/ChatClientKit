@@ -70,7 +70,7 @@ struct MLXLocalModelAPITests {
         ])
 
         let streamed = responseChunks(from: generated, toolProcessor: processor)
-        let finished = processor.processEOSOutputs().map(responseChunk)
+        let finished = processor.processEOSOutputs().compactMap(responseChunk)
 
         #expect(streamed == [.text("Checking first. ")])
         let request = try #require(finished.first?.toolValue)

@@ -188,7 +188,7 @@ struct MLXToolStreamState {
 
             let outputs = processor.processChunkOutputs(content)
             if inferredMistralToolName == nil {
-                chunks.append(contentsOf: outputs.map(responseChunk))
+                chunks.append(contentsOf: outputs.compactMap(responseChunk))
             } else {
                 pendingMistralOutputs.append(contentsOf: outputs)
             }
@@ -200,7 +200,7 @@ struct MLXToolStreamState {
         guard let processor else { return [] }
         let eosOutputs = processor.processEOSOutputs()
         guard let toolName = inferredMistralToolName else {
-            return eosOutputs.map(responseChunk)
+            return eosOutputs.compactMap(responseChunk)
         }
 
         let outputs = pendingMistralOutputs + eosOutputs
@@ -208,14 +208,14 @@ struct MLXToolStreamState {
         guard !outputs.contains(where: { output in
             if case .toolCall = output { true } else { false }
         }) else {
-            return outputs.map(responseChunk)
+            return outputs.compactMap(responseChunk)
         }
 
         let text = outputs.reduce(into: "") { result, output in
             if case let .response(value) = output { result += value }
         }
         guard let arguments = bareToolArguments(from: text, toolName: toolName) else {
-            return outputs.map(responseChunk)
+            return outputs.compactMap(responseChunk)
         }
         return [.tool(ToolRequest(name: toolName, args: arguments))]
     }
@@ -253,7 +253,7 @@ func responseChunks(
         }
         if let content = choice.delta.content {
             if let toolProcessor {
-                chunks.append(contentsOf: toolProcessor.processChunkOutputs(content).map(responseChunk))
+                chunks.append(contentsOf: toolProcessor.processChunkOutputs(content).compactMap(responseChunk))
             } else {
                 chunks.append(.text(content))
             }
@@ -263,16 +263,21 @@ func responseChunks(
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-func responseChunk(from output: ToolCallProcessor.Output) -> ChatResponseChunk {
+func responseChunk(from output: ToolCallProcessor.Output) -> ChatResponseChunk? {
     switch output {
     case let .response(text):
-        .text(text)
+        return .text(text)
     case let .toolCall(toolCall):
-        .tool(ToolRequest(
+        return .tool(ToolRequest(
             id: toolCall.id,
             name: toolCall.function.name,
             args: toolCallArgsToJSON(toolCall.function.arguments)
         ))
+    case let .rejectedToolCall(rejected):
+        // A tool-call-shaped payload that could not become an executable call.
+        // It is protocol residue, not assistant text, so it never reaches the UI.
+        logger.warning("dropping rejected tool call: \(rejected.reason.rawValue)")
+        return nil
     }
 }
 
