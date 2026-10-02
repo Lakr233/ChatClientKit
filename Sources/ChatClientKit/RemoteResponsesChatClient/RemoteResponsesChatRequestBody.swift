@@ -141,12 +141,8 @@ extension ResponsesRequestBody {
             case text
             case annotations
             case imageURL = "image_url"
-            case inputAudio = "input_audio"
-        }
-
-        enum ImageKeys: String, CodingKey {
-            case url
             case detail
+            case inputAudio = "input_audio"
         }
 
         enum AudioKeys: String, CodingKey {
@@ -165,10 +161,11 @@ extension ResponsesRequestBody {
                 try container.encode(text, forKey: .text)
                 try container.encode([String](), forKey: .annotations)
             case let .inputImage(url, detail):
+                // Unlike Chat Completions, the Responses API takes `image_url`
+                // as a flat string next to `detail`, not as a nested object.
                 try container.encode("input_image", forKey: .type)
-                var nested = container.nestedContainer(keyedBy: ImageKeys.self, forKey: .imageURL)
-                try nested.encode(url, forKey: .url)
-                try nested.encodeIfPresent(detail, forKey: .detail)
+                try container.encode(url.absoluteString, forKey: .imageURL)
+                try container.encode(detail ?? .auto, forKey: .detail)
             case let .inputAudio(data, format):
                 try container.encode("input_audio", forKey: .type)
                 var nested = container.nestedContainer(keyedBy: AudioKeys.self, forKey: .inputAudio)
