@@ -25,9 +25,9 @@ extension MLXChatClient {
         body: ChatRequestBody,
         token: UUID
     ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
-        var userInput = try userInput(body: body)
+        let userInput = try userInput(body: body)
         let generateParameters = generateParameters(body: body)
-        let container = try await loadContainer(adjusting: &userInput)
+        let container = try await loadContainer()
         let toolSpecs = userInput.tools
         return try await container.perform(nonSendable: userInput) { context, lockedInput in
             let input = try await context.processor.prepare(input: lockedInput)
