@@ -23,7 +23,7 @@ struct MLXLocalModelAPITests {
         let input = try client.userInput(body: body)
         let tools = try #require(input.tools)
         let function = try #require(tools.first?["function"] as? [String: any Sendable])
-        let messages = try modelMessages(from: input)
+        let messages = DefaultMessageGenerator().generate(from: input)
         let system = try #require(messages.first)
 
         #expect(tools.count == 1)
@@ -46,7 +46,8 @@ struct MLXLocalModelAPITests {
             .user(content: .text("Summarize it.")),
         ])
 
-        let messages = try modelMessages(from: client.userInput(body: body))
+        let input = try client.userInput(body: body)
+        let messages = DefaultMessageGenerator().generate(from: input)
         let assistant = try #require(messages.first)
         let calls = try #require(assistant["tool_calls"] as? [[String: any Sendable]])
         let function = try #require(calls.first?["function"] as? [String: any Sendable])
@@ -178,16 +179,4 @@ struct MLXLocalModelAPITests {
         #expect(high.temperature == 0.6)
         #expect(low.temperature == 0)
     }
-
-    @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-    private func modelMessages(from input: UserInput) throws -> [[String: any Sendable]] {
-        guard case let .messages(messages) = input.prompt else {
-            throw MLXLocalModelAPITestError.expectedMessages
-        }
-        return messages
-    }
-}
-
-private enum MLXLocalModelAPITestError: Error {
-    case expectedMessages
 }

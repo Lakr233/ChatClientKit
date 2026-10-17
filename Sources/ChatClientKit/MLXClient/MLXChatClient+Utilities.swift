@@ -20,56 +20,51 @@ extension MLXChatClient {
     }
 
     func userInput(body: ChatRequestBody) throws -> UserInput {
-        var messages: [[String: any Sendable]] = []
-        var images: [UserInput.Image] = []
+        var messages: [Chat.Message] = []
         var toolNamesByCallID: [String: String] = [:]
         for message in body.messages {
             switch message {
             case let .assistant(content, toolCalls, _):
-                var msg: [String: any Sendable] = ["role": "assistant"]
-                if let content { msg["content"] = userInputContent(for: content) }
-                if let toolCalls, !toolCalls.isEmpty {
-                    msg["tool_calls"] = toolCalls.map { tc -> [String: any Sendable] in
+                let calls = toolCalls.flatMap { toolCalls -> [MLXLMCommon.ToolCall]? in
+                    guard !toolCalls.isEmpty else { return nil }
+                    return toolCalls.map { tc in
                         toolNamesByCallID[tc.id] = tc.function.name
-                        return [
-                            "type": "function",
-                            "id": tc.id,
-                            "function": [
-                                "name": tc.function.name,
-                                "arguments": decodedToolArguments(tc.function.arguments),
-                            ] as [String: any Sendable],
-                        ]
+                        return MLXLMCommon.ToolCall(
+                            function: .init(
+                                name: tc.function.name,
+                                arguments: decodedToolArguments(tc.function.arguments)
+                            ),
+                            id: tc.id
+                        )
                     }
                 }
-                messages.append(msg)
+                messages.append(.assistant(
+                    content.map { userInputContent(for: $0) } ?? "",
+                    toolCalls: calls
+                ))
             case let .system(content, _):
-                let msg: [String: any Sendable] = ["role": "system", "content": userInputContent(for: content)]
-                messages.append(msg)
+                messages.append(.system(userInputContent(for: content)))
             case let .developer(content, _):
-                let msg: [String: any Sendable] = ["role": "system", "content": userInputContent(for: content)]
-                messages.append(msg)
+                messages.append(.system(userInputContent(for: content)))
             case let .tool(content, toolCallID):
-                var msg: [String: any Sendable] = [
-                    "role": "tool",
-                    "content": userInputContent(for: content),
-                    "tool_call_id": toolCallID,
-                ]
-                if let name = toolNamesByCallID[toolCallID] {
-                    msg["name"] = name
-                }
-                messages.append(msg)
+                messages.append(.tool(
+                    userInputContent(for: content),
+                    id: toolCallID,
+                    name: toolNamesByCallID[toolCallID]
+                ))
             case let .user(content, _):
                 switch content {
                 case let .text(text):
-                    let msg: [String: any Sendable] = ["role": "user", "content": text]
-                    messages.append(msg)
+                    messages.append(.user(text))
                 case let .parts(contentParts):
+                    var textParts: [String] = []
+                    var images: [UserInput.Image] = []
                     for part in contentParts {
                         switch part {
                         case let .text(text):
-                            let msg: [String: any Sendable] = ["role": "user", "content": text]
-                            messages.append(msg)
+                            textParts.append(text)
                         case let .imageURL(url, _):
+                            guard preferredKind == .vlm else { continue }
                             guard let text = url.absoluteString.components(separatedBy: ";base64,").last,
                                   let data = Data(base64Encoded: text),
                                   var image = MLXImageUtilities.decodeImage(data: data)
@@ -104,6 +99,12 @@ extension MLXChatClient {
                             continue
                         }
                     }
+                    if !textParts.isEmpty || !images.isEmpty {
+                        messages.append(.user(
+                            textParts.joined(separator: "\n"),
+                            images: images
+                        ))
+                    }
                 }
             }
         }
@@ -112,7 +113,7 @@ extension MLXChatClient {
             appendSystemDirective(directive, to: &messages)
         }
         let tools = convertToToolSpecs(selectedTools)
-        return .init(messages: messages, images: images, tools: tools)
+        return .init(chat: messages, tools: tools)
     }
 
     func generateParameters(body: ChatRequestBody) -> GenerateParameters {
@@ -124,18 +125,16 @@ extension MLXChatClient {
         return parameters
     }
 
-    func loadContainer(adjusting userInput: inout UserInput) async throws -> ModelContainer {
+    func loadContainer() async throws -> ModelContainer {
         let this = self
         switch preferredKind {
         case .llm:
             let container = try await coordinator.container(for: modelConfiguration, kind: .llm)
             logger.info("successfully loaded LLM model: \(this.modelConfiguration.name)")
-            userInput.images = []
             return container
         case .vlm:
             let container = try await coordinator.container(for: modelConfiguration, kind: .vlm)
             logger.info("successfully loaded VLM model: \(this.modelConfiguration.name)")
-            if userInput.images.isEmpty { userInput.images.append(.ciImage(emptyImage)) }
             return container
         }
     }
@@ -171,7 +170,7 @@ extension MLXChatClient {
         }
     }
 
-    private func decodedToolArguments(_ arguments: String?) -> any Sendable {
+    private func decodedToolArguments(_ arguments: String?) -> [String: any Sendable] {
         guard let arguments,
               let data = arguments.data(using: .utf8),
               let object = try? JSONSerialization.jsonObject(with: data),
@@ -205,14 +204,12 @@ extension MLXChatClient {
 
     private func appendSystemDirective(
         _ directive: String,
-        to messages: inout [[String: any Sendable]]
+        to messages: inout [Chat.Message]
     ) {
-        if let index = messages.firstIndex(where: { $0["role"] as? String == "system" }),
-           let content = messages[index]["content"] as? String
-        {
-            messages[index]["content"] = content + "\n" + directive
+        if let index = messages.firstIndex(where: { $0.role == .system }) {
+            messages[index].content += "\n" + directive
         } else {
-            messages.insert(["role": "system", "content": directive], at: 0)
+            messages.insert(.system(directive), at: 0)
         }
     }
 

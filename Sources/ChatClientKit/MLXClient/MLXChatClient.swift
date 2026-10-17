@@ -1,13 +1,9 @@
-import CoreImage
 import Foundation
 @preconcurrency import MLXLMCommon
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 public class MLXChatClient: ChatService, @unchecked Sendable {
     let modelConfiguration: ModelConfiguration
-    let emptyImage: CIImage = MLXImageUtilities.placeholderImage(
-        size: .init(width: 64, height: 64)
-    )
     let coordinator: MLXModelCoordinating
     let preferredKind: MLXModelKind
 
