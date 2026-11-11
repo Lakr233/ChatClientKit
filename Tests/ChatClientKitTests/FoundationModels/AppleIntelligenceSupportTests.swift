@@ -96,7 +96,29 @@ struct AppleIntelligencePromptBuilderTests {
     }
 
     @Test
-    func `makePrompt prioritizes latest user message`() {
+    func `makeInstructions separates blocks with a blank line`() {
+        let result = AppleIntelligencePromptBuilder.makeInstructions(
+            persona: "Persona.",
+            messages: [.system(content: .text("System."))],
+            additionalDirectives: ["Directive."]
+        )
+
+        #expect(result == "Persona.\n\nSystem.\n\nDirective.")
+    }
+
+    @Test
+    func `makePrompt sends the only user message verbatim`() {
+        let messages: [ChatRequestBody.Message] = [
+            .system(content: .text("You are a helpful assistant.")),
+            .user(content: .text("今天星期几")),
+        ]
+
+        #expect(AppleIntelligencePromptBuilder.makePrompt(from: messages) == "今天星期几")
+        #expect(AppleIntelligencePromptBuilder.makeHistory(from: messages).isEmpty)
+    }
+
+    @Test
+    func `makePrompt sends the latest user message without a role label`() {
         let messages: [ChatRequestBody.Message] = [
             .user(content: .text("First question")),
             .assistant(
@@ -111,13 +133,138 @@ struct AppleIntelligencePromptBuilderTests {
         ]
 
         let prompt = AppleIntelligencePromptBuilder.makePrompt(from: messages)
+        let history = AppleIntelligencePromptBuilder.makeHistory(from: messages)
 
-        #expect(prompt.contains("Conversation so far"))
-        #expect(prompt.contains("User: First question"))
-        #expect(prompt.contains("Assistant: First answer"))
-        #expect(prompt.contains(#"Assistant tool call (call_1): lookup({"query":"weather"})"#))
-        #expect(prompt.contains("Tool(call_1): tool output"))
-        #expect(prompt.contains("User (Alex): Latest question"))
+        #expect(prompt == "Latest question")
+        #expect(history == [
+            .prompt("First question"),
+            .response("First answer"),
+            .toolCalls([.init(id: "call_1", name: "lookup", arguments: #"{"query":"weather"}"#)]),
+            .toolOutput(id: "call_1", toolName: "lookup", text: "tool output"),
+        ])
+    }
+
+    @Test
+    func `Tool round keeps the user question as the prompt and the output in history`() {
+        let messages: [ChatRequestBody.Message] = [
+            .system(content: .text("You are a helpful assistant.")),
+            .user(content: .text("今天星期几")),
+            .assistant(toolCalls: [.init(
+                id: "call_date",
+                function: .init(name: "get_date", arguments: "{}")
+            )]),
+            .tool(content: .text("2026-11-11, Wednesday"), toolCallID: "call_date"),
+        ]
+
+        #expect(AppleIntelligencePromptBuilder.makePrompt(from: messages) == "今天星期几")
+        #expect(AppleIntelligencePromptBuilder.makeHistory(from: messages) == [
+            .toolCalls([.init(id: "call_date", name: "get_date", arguments: "{}")]),
+            .toolOutput(id: "call_date", toolName: "get_date", text: "2026-11-11, Wednesday"),
+        ])
+    }
+
+    @Test
+    @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
+    func `Session context carries history in the transcript, not the prompt`() throws {
+        let client = AppleIntelligenceChatClient()
+        let body = ChatRequestBody(messages: [
+            .system(content: .text("Be brief.")),
+            .user(content: .text("First question")),
+            .assistant(content: .text("First answer")),
+            .user(content: .text("今天星期几")),
+        ])
+
+        let context = try client.makeSessionContext(body: body, persona: "")
+        let entries = Array(context.session.transcript)
+
+        #expect(context.prompt == "今天星期几")
+        #expect(entries.count == 3)
+        guard entries.count == 3 else { return }
+        guard case let .instructions(instructions) = entries[0] else {
+            Issue.record("Expected instructions first")
+            return
+        }
+        #expect(text(of: instructions.segments) == "Be brief.")
+        guard case let .prompt(prompt) = entries[1] else {
+            Issue.record("Expected the earlier user message as a prompt entry")
+            return
+        }
+        #expect(text(of: prompt.segments) == "First question")
+        guard case let .response(response) = entries[2] else {
+            Issue.record("Expected the earlier answer as a response entry")
+            return
+        }
+        #expect(text(of: response.segments) == "First answer")
+    }
+
+    @Test
+    @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
+    func `Session context exposes the tool output on a tool round`() throws {
+        let client = AppleIntelligenceChatClient()
+        let body = ChatRequestBody(
+            messages: [
+                .user(content: .text("今天星期几")),
+                .assistant(toolCalls: [.init(
+                    id: "call_date",
+                    function: .init(name: "get_date", arguments: #"{"format":"weekday"}"#)
+                )]),
+                .tool(content: .text("Wednesday"), toolCallID: "call_date"),
+            ],
+            tools: [.function(name: "get_date", description: "Current date", parameters: nil, strict: nil)]
+        )
+
+        let context = try client.makeSessionContext(body: body, persona: "Persona.")
+        let entries = Array(context.session.transcript)
+
+        #expect(context.prompt == "今天星期几")
+        #expect(entries.count == 3)
+        guard entries.count == 3 else { return }
+        guard case let .instructions(instructions) = entries[0] else {
+            Issue.record("Expected instructions first")
+            return
+        }
+        #expect(instructions.toolDefinitions.map(\.name) == ["get_date"])
+        guard case let .toolCalls(calls) = entries[1] else {
+            Issue.record("Expected the tool call entry")
+            return
+        }
+        #expect(calls.map(\.toolName) == ["get_date"])
+        #expect(calls.map(\.id) == ["call_date"])
+        guard case let .toolOutput(output) = entries[2] else {
+            Issue.record("Expected the tool output entry")
+            return
+        }
+        #expect(output.id == "call_date")
+        #expect(output.toolName == "get_date")
+        #expect(text(of: output.segments) == "Wednesday")
+    }
+
+    @Test
+    @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
+    func `Session context without history keeps the plain instructions session`() throws {
+        let client = AppleIntelligenceChatClient()
+        let body = ChatRequestBody(messages: [
+            .system(content: .text("Be brief.")),
+            .user(content: .text("今天星期几")),
+        ])
+
+        let context = try client.makeSessionContext(body: body, persona: "")
+        let entries = Array(context.session.transcript)
+
+        #expect(context.prompt == "今天星期几")
+        #expect(entries.count == 1)
+        guard case let .instructions(instructions) = entries.first else {
+            Issue.record("Expected only the instructions entry")
+            return
+        }
+        #expect(text(of: instructions.segments) == "Be brief.")
+    }
+
+    @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
+    private func text(of segments: [Transcript.Segment]) -> String {
+        segments.compactMap { segment in
+            if case let .text(text) = segment { text.content } else { nil }
+        }.joined()
     }
 }
 

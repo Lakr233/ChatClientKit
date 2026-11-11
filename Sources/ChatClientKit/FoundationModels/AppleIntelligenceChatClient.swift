@@ -57,8 +57,18 @@ public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
         )
 
         let prompt = AppleIntelligencePromptBuilder.makePrompt(from: body.messages)
+        let history = AppleIntelligencePromptBuilder.makeHistory(from: body.messages)
 
-        let session = if tools.isEmpty {
+        let session = if !history.isEmpty {
+            LanguageModelSession(
+                tools: tools,
+                transcript: AppleIntelligencePromptBuilder.makeTranscript(
+                    instructions: instructionText,
+                    tools: tools,
+                    history: history
+                )
+            )
+        } else if tools.isEmpty {
             LanguageModelSession(instructions: instructionText)
         } else {
             LanguageModelSession(
