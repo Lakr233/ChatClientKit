@@ -176,7 +176,8 @@ extension ChatRequest {
                 function: .init(
                     name: trimmed(call.function.name) ?? call.function.name,
                     arguments: trimmed(call.function.arguments)
-                )
+                ),
+                extraFields: call.extraFields
             )
         }
         return normalized.sorted { $0.id < $1.id }

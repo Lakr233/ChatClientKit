@@ -101,6 +101,33 @@ extension AnyCodingValue: Equatable {
     }
 }
 
+extension AnyCodingValue: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        switch self {
+        case .null:
+            hasher.combine(0)
+        case let .bool(bool):
+            hasher.combine(1)
+            hasher.combine(bool)
+        case let .int(int):
+            hasher.combine(2)
+            hasher.combine(int)
+        case let .double(double):
+            hasher.combine(3)
+            hasher.combine(double)
+        case let .string(string):
+            hasher.combine(4)
+            hasher.combine(string)
+        case let .array(array):
+            hasher.combine(5)
+            hasher.combine(array)
+        case let .object(object):
+            hasher.combine(6)
+            hasher.combine(object)
+        }
+    }
+}
+
 public extension [String: AnyCodingValue] {
     var untypedDictionary: [String: Any] {
         convertToUntypedDictionary(self)

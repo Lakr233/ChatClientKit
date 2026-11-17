@@ -65,7 +65,50 @@ public extension ChatCompletionChunk.Choice.Delta {
         public let id: String?
         public let type: String?
         public let function: Function?
+        /// Keys beyond `index`, `id`, `type` and `function`, kept verbatim so
+        /// they can be echoed back (e.g. Gemini's `extra_content`).
+        public let extraFields: [String: AnyCodingValue]?
+
+        public init(
+            index: Int? = nil,
+            id: String? = nil,
+            type: String? = nil,
+            function: Function? = nil,
+            extraFields: [String: AnyCodingValue]? = nil
+        ) {
+            self.index = index
+            self.id = id
+            self.type = type
+            self.function = function
+            self.extraFields = (extraFields?.isEmpty ?? true) ? nil : extraFields
+        }
+
+        public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: ToolCallFieldKey.self)
+            index = try container.decodeIfPresent(Int.self, forKey: .init("index"))
+            id = try container.decodeIfPresent(String.self, forKey: .init("id"))
+            type = try container.decodeIfPresent(String.self, forKey: .init("type"))
+            function = try container.decodeIfPresent(Function.self, forKey: .init("function"))
+            var extras: [String: AnyCodingValue] = [:]
+            for key in container.allKeys where !ToolCallFieldKey.standardFields.contains(key.stringValue) {
+                extras[key.stringValue] = try container.decode(AnyCodingValue.self, forKey: key)
+            }
+            extraFields = extras.isEmpty ? nil : extras
+        }
     }
+}
+
+/// Dynamic key for tool-call objects, which may carry provider-specific
+/// fields next to the standard OpenAI ones.
+struct ToolCallFieldKey: CodingKey {
+    static let standardFields: Set<String> = ["index", "id", "type", "function"]
+
+    var stringValue: String
+    var intValue: Int? { nil }
+
+    init(_ stringValue: String) { self.stringValue = stringValue }
+    init(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue _: Int) { nil }
 }
 
 public extension ChatCompletionChunk.Choice.Delta.ToolCall {

@@ -35,7 +35,8 @@ public enum ToolCallArgumentRepair {
                 arguments: request.args,
                 forToolNamed: request.name,
                 using: tools
-            )
+            ),
+            extraFields: request.extraFields
         )
     }
 
@@ -54,7 +55,8 @@ public enum ToolCallArgumentRepair {
                         forToolNamed: call.function.name,
                         using: tools
                     )
-                )
+                ),
+                extraFields: call.extraFields
             )
         }
     }
