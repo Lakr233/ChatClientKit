@@ -27,7 +27,7 @@ jobs:
       - name: Run unit tests
         run: |
           swift test \
-            --filter 'RemoteCompletionsChatClientUnitTests|RemoteCompletionsChatToolTests|RemoteResponsesClientUnitTests|RequestSanitizerTests|ChatRequestBuilderTests|AppleIntelligenceFunctionTests|AppleIntelligencePromptBuilderTests|AppleIntelligenceToolProxyTests'
+            --filter 'RemoteCompletionsChatClientUnitTests|RemoteCompletionsChatToolTests|RemoteResponsesClientUnitTests|ToolCallExtraFieldsTests|RequestSanitizerTests|ChatRequestBuilderTests|AppleIntelligenceFunctionTests|AppleIntelligencePromptBuilderTests|AppleIntelligenceToolProxyTests'
 
   integration-tests:
     name: Integration Tests (moonshotai/kimi-k2.5)

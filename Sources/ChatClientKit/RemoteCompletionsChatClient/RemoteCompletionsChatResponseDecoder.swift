@@ -18,7 +18,7 @@ struct RemoteCompletionsChatResponseDecoder {
         if let toolCall = message.toolCalls?.first, let function = toolCall.function, let name = function.name {
             let args = function.arguments ?? "{}"
             let id = toolCall.id ?? UUID().uuidString
-            return [.tool(ToolRequest(id: id, name: name, args: args))]
+            return [.tool(ToolRequest(id: id, name: name, args: args, extraFields: toolCall.extraFields))]
         }
 
         if let images = message.images,

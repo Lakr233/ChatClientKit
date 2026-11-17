@@ -259,13 +259,30 @@ public extension ChatRequestBody.Message {
         let id: String
         let type = "function"
         let function: Function
+        /// Provider-specific fields received with the call (see
+        /// `ToolRequest.extraFields`), encoded back next to the standard
+        /// keys. Nil leaves the payload exactly `id`, `type`, `function`.
+        public let extraFields: [String: AnyCodingValue]?
 
         public init(
             id: String,
-            function: ChatRequestBody.Message.ToolCall.Function
+            function: ChatRequestBody.Message.ToolCall.Function,
+            extraFields: [String: AnyCodingValue]? = nil
         ) {
             self.id = id
             self.function = function
+            self.extraFields = (extraFields?.isEmpty ?? true) ? nil : extraFields
+        }
+
+        public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: ToolCallFieldKey.self)
+            try container.encode(id, forKey: .init("id"))
+            try container.encode(type, forKey: .init("type"))
+            try container.encode(function, forKey: .init("function"))
+            guard let extraFields else { return }
+            for key in extraFields.keys.sorted() where !ToolCallFieldKey.standardFields.contains(key) {
+                try container.encode(extraFields[key]!, forKey: .init(key))
+            }
         }
     }
 }
