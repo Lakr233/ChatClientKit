@@ -19,7 +19,7 @@ class CompletionToolCollector {
         let deltaExtraFields = delta.extraFields ?? [:]
         guard delta.function != nil || !deltaExtraFields.isEmpty else { return }
 
-        if currentId != delta.index {
+        if startsNewCall(delta) {
             finalizeCurrentDeltaContent()
         }
         currentId = delta.index
@@ -36,6 +36,25 @@ class CompletionToolCollector {
         if let arguments = delta.function?.arguments {
             functionArguments.append(arguments)
         }
+    }
+
+    /// OpenAI numbers parallel calls 0, 1, … and sends the id and name only
+    /// on the first fragment of each. Gemini's OpenAI-compatible endpoint
+    /// instead sends every call whole in its own delta without `index` (and
+    /// some servers send index 0 for all of them), so a new id, or a name
+    /// arriving for a call that already has one, also begins a new call.
+    private func startsNewCall(_ delta: ChatCompletionChunk.Choice.Delta.ToolCall) -> Bool {
+        if currentId != delta.index { return true }
+        guard !functionName.isEmpty || !functionArguments.isEmpty else { return false }
+
+        let deltaID = delta.id ?? ""
+        if !deltaID.isEmpty, let toolCallID, !toolCallID.isEmpty {
+            return deltaID != toolCallID
+        }
+        if let name = delta.function?.name, !name.isEmpty, !functionName.isEmpty {
+            return true
+        }
+        return false
     }
 
     func finalizeCurrentDeltaContent() {
