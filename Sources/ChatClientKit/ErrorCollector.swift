@@ -27,7 +27,7 @@ public class ErrorCollector {
 }
 
 nonisolated extension ErrorCollector {
-    static func new() -> ErrorCollector {
+    public static func new() -> ErrorCollector {
         MainActor.isolated { .init() }
     }
 }
