@@ -174,6 +174,12 @@ struct AppleIntelligenceStreamState {
     private var accumulatedText = ""
 
     mutating func textChunk(for fullText: String) -> ChatResponseChunk? {
+        delta(for: fullText).map { .text($0) }
+    }
+
+    /// The text added since the previous snapshot, or nil when nothing was
+    /// added or the snapshot rewrote earlier text.
+    mutating func delta(for fullText: String) -> String? {
         guard fullText.hasPrefix(accumulatedText) else {
             accumulatedText = fullText
             return nil
@@ -185,7 +191,7 @@ struct AppleIntelligenceStreamState {
         )
         let delta = String(fullText[deltaStart...])
         accumulatedText = fullText
-        return delta.isEmpty ? nil : .text(delta)
+        return delta.isEmpty ? nil : delta
     }
 
     func toolChunk(for request: ToolRequest) -> ChatResponseChunk {
