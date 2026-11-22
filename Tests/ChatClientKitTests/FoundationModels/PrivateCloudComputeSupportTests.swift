@@ -34,7 +34,7 @@ import Testing
             )
             #expect(
                 PrivateCloudComputeModel.failure(from: quota)
-                    == .quotaLimitReached(resetDate: reset, canIncreaseLimit: false)
+                    == .quotaLimitReached(resetDate: reset)
             )
 
             let quotaWithoutDate = PrivateCloudComputeLanguageModel.Error.quotaLimitReached(
@@ -42,7 +42,7 @@ import Testing
             )
             #expect(
                 PrivateCloudComputeModel.failure(from: quotaWithoutDate)
-                    == .quotaLimitReached(resetDate: nil, canIncreaseLimit: false)
+                    == .quotaLimitReached(resetDate: nil)
             )
 
             let busy = PrivateCloudComputeLanguageModel.Error.serviceUnavailable(

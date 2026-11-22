@@ -55,20 +55,11 @@ public enum PrivateCloudComputeAvailabilityState: Sendable, Equatable {
     }
 }
 
-/// The user's daily allowance. Read it only once the model is available:
-/// the framework reports a healthy quota even while the model is unavailable.
-public enum PrivateCloudComputeQuotaState: Sendable, Equatable {
-    case belowLimit
-    case approachingLimit
-    /// `canIncreaseLimit` is true when the system offers an upgrade path
-    /// (`QuotaUsage.limitIncreaseSuggestion != nil`).
-    case limitReached(resetDate: Date?, canIncreaseLimit: Bool)
-}
-
 /// The failures the cloud model reports beyond ordinary generation errors.
 public enum PrivateCloudComputeFailure: Sendable, Equatable {
     case networkFailure
-    case quotaLimitReached(resetDate: Date?, canIncreaseLimit: Bool)
+    /// The daily limit is used up; `resetDate` is when it resets, if known.
+    case quotaLimitReached(resetDate: Date?)
     case serviceUnavailable
     /// Thrown before any request when the model is unavailable.
     case unavailable(PrivateCloudComputeUnavailableReason)
