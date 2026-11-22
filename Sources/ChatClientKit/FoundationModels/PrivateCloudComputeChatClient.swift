@@ -12,13 +12,18 @@
             public var persona: String
             /// nil leaves the reasoning level to the model.
             public var reasoningDepth: PrivateCloudComputeReasoningDepth?
+            /// Called for each stage of a request, so the app can log what
+            /// the framework did. Called from the streaming task.
+            public var eventHandler: (@Sendable (PrivateCloudComputeStreamEvent) -> Void)?
 
             public init(
                 persona: String = "",
-                reasoningDepth: PrivateCloudComputeReasoningDepth? = nil
+                reasoningDepth: PrivateCloudComputeReasoningDepth? = nil,
+                eventHandler: (@Sendable (PrivateCloudComputeStreamEvent) -> Void)? = nil
             ) {
                 self.persona = persona
                 self.reasoningDepth = reasoningDepth
+                self.eventHandler = eventHandler
             }
         }
 
@@ -41,6 +46,9 @@
             let prompt: String
             let options: GenerationOptions
             let contextOptions: ContextOptions
+            let historyEntries: Int
+            let tools: Int
+            let instructionsLength: Int
         }
 
         static func reasoningLevel(
@@ -110,7 +118,10 @@
                 session: session,
                 prompt: prompt,
                 options: options,
-                contextOptions: contextOptions
+                contextOptions: contextOptions,
+                historyEntries: history.count,
+                tools: tools.count,
+                instructionsLength: instructionText.count
             )
         }
 
@@ -139,38 +150,69 @@
             }
 
             let context = try makeSessionContext(body: body)
+            let report = configuration.eventHandler ?? { _ in }
+            report(.sessionCreated(
+                historyEntries: context.historyEntries,
+                tools: context.tools,
+                instructionsLength: context.instructionsLength,
+                promptLength: context.prompt.count,
+                reasoningDepth: configuration.reasoningDepth
+            ))
 
             return AnyAsyncSequence(AsyncThrowingStream { continuation in
                 let task = Task {
                     var textState = AppleIntelligenceStreamState()
                     var reasoningState = AppleIntelligenceStreamState()
+                    var snapshots = 0
                     do {
+                        report(.requestSent)
+                        // Each snapshot holds everything generated so far
+                        // ("a response stream that produces aggregated
+                        // tokens"), so only the growth is forwarded.
                         for try await snapshot in context.session.streamResponse(
                             to: context.prompt,
                             options: context.options,
                             contextOptions: context.contextOptions
                         ) {
+                            snapshots += 1
                             let reasoning = Self.reasoningText(in: snapshot.transcriptEntries)
+                            report(.snapshot(
+                                index: snapshots,
+                                contentLength: snapshot.content.count,
+                                reasoningLength: reasoning.count,
+                                transcriptEntries: snapshot.transcriptEntries.count
+                            ))
+                            Self.reportRewrite(of: .reasoning, from: reasoningState, to: reasoning, report)
                             if let delta = reasoningState.delta(for: reasoning) {
                                 continuation.yield(.reasoning(delta))
                             }
+                            Self.reportRewrite(of: .content, from: textState, to: snapshot.content, report)
                             if let chunk = textState.textChunk(for: snapshot.content) {
                                 continuation.yield(chunk)
                             }
                         }
+                        report(.finished(
+                            snapshots: snapshots,
+                            contentLength: textState.accumulatedText.count,
+                            reasoningLength: reasoningState.accumulatedText.count
+                        ))
                         continuation.finish()
                     } catch is CancellationError {
+                        report(.cancelled(snapshots: snapshots))
                         continuation.finish()
                     } catch let error as LanguageModelSession.ToolCallError {
                         guard let captured = error.underlyingError as? AppleIntelligenceToolError,
                               case let .invocationCaptured(request) = captured
                         else {
+                            report(.failed(snapshots: snapshots, error: error))
                             continuation.finish(throwing: error)
                             return
                         }
+                        report(.toolCallCaptured(name: request.name))
                         continuation.yield(textState.toolChunk(for: request))
                         continuation.finish()
                     } catch {
+                        report(.failed(snapshots: snapshots, error: error))
                         continuation.finish(throwing: error)
                     }
                 }
@@ -179,6 +221,20 @@
                     task.cancel()
                 }
             })
+        }
+
+        static func reportRewrite(
+            of field: PrivateCloudComputeStreamEvent.Field,
+            from state: AppleIntelligenceStreamState,
+            to fullText: String,
+            _ report: (PrivateCloudComputeStreamEvent) -> Void
+        ) {
+            guard !fullText.hasPrefix(state.accumulatedText) else { return }
+            report(.snapshotRewritten(
+                field: field,
+                previousLength: state.accumulatedText.count,
+                newLength: fullText.count
+            ))
         }
     }
 #endif

@@ -171,7 +171,7 @@ public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
 }
 
 struct AppleIntelligenceStreamState {
-    private var accumulatedText = ""
+    private(set) var accumulatedText = ""
 
     mutating func textChunk(for fullText: String) -> ChatResponseChunk? {
         delta(for: fullText).map { .text($0) }

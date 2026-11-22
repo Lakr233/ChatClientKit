@@ -113,6 +113,34 @@ import Testing
             #expect(Array(context.session.transcript).count == 3)
             #expect(context.contextOptions.reasoningLevel == .deep)
             #expect(context.options.temperature == nil)
+            #expect(context.historyEntries == 2)
+            #expect(context.tools == 0)
+            #expect(context.instructionsLength == "Be brief.".count)
+        }
+
+        @Test
+        @available(iOS 27.0, macOS 27.0, macCatalyst 27.0, *)
+        func `A snapshot that rewrites earlier text is reported, growth is not`() {
+            var state = AppleIntelligenceStreamState()
+            _ = state.delta(for: "Hello")
+
+            var events: [PrivateCloudComputeStreamEvent] = []
+            PrivateCloudComputeChatClient.reportRewrite(of: .content, from: state, to: "Hello there") {
+                events.append($0)
+            }
+            #expect(events.isEmpty)
+
+            PrivateCloudComputeChatClient.reportRewrite(of: .content, from: state, to: "Hi") {
+                events.append($0)
+            }
+            #expect(events.count == 1)
+            if case let .snapshotRewritten(field, previousLength, newLength) = events.first {
+                #expect(field == .content)
+                #expect(previousLength == 5)
+                #expect(newLength == 2)
+            } else {
+                Issue.record("expected a rewrite event")
+            }
         }
     }
 #endif
