@@ -86,3 +86,36 @@ public struct PrivateCloudComputeUnavailableError: LocalizedError, Sendable, Equ
         "Apple Intelligence Cloud is unavailable: \(reason)"
     }
 }
+
+/// What `PrivateCloudComputeChatClient` did with one request, for the app's
+/// own log. Lengths count characters and are cumulative for the request.
+public enum PrivateCloudComputeStreamEvent: Sendable {
+    /// The session is built; nothing has been sent yet.
+    case sessionCreated(
+        historyEntries: Int,
+        tools: Int,
+        instructionsLength: Int,
+        promptLength: Int,
+        reasoningDepth: PrivateCloudComputeReasoningDepth?
+    )
+    /// `streamResponse` was called and the client is waiting for snapshots.
+    case requestSent
+    /// A snapshot arrived. `index` starts at 1.
+    case snapshot(index: Int, contentLength: Int, reasoningLength: Int, transcriptEntries: Int)
+    /// A snapshot's text didn't extend the previous one, so the changed part
+    /// could not be forwarded as a delta.
+    case snapshotRewritten(field: Field, previousLength: Int, newLength: Int)
+    /// The model called a tool; the call goes back to the app.
+    case toolCallCaptured(name: String)
+    /// The stream ended normally.
+    case finished(snapshots: Int, contentLength: Int, reasoningLength: Int)
+    /// The consumer stopped the stream.
+    case cancelled(snapshots: Int)
+    /// The framework threw; the same error ends the stream.
+    case failed(snapshots: Int, error: any Error)
+
+    public enum Field: String, Sendable {
+        case content
+        case reasoning
+    }
+}
