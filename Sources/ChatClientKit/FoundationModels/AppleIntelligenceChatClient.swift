@@ -48,7 +48,10 @@ public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
         persona: String
     ) throws -> SessionContext {
         let selectedTools = try body.selectedTools()
-        let tools = try makeToolProxies(from: selectedTools)
+        let tools = try AppleIntelligenceToolProxy.makeProxies(
+            from: selectedTools,
+            toolChoice: body.toolChoice
+        ).tools
 
         let instructionText = AppleIntelligencePromptBuilder.makeInstructions(
             persona: persona,
@@ -89,21 +92,6 @@ public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {
         )
 
         return SessionContext(session: session, prompt: prompt, options: options)
-    }
-
-    func makeToolProxies(
-        from tools: [ChatRequestBody.Tool]
-    ) throws -> [any Tool] {
-        try tools.map { tool -> any Tool in
-            switch tool {
-            case let .function(name, description, parameters, _):
-                return try AppleIntelligenceToolProxy(
-                    name: name,
-                    description: description,
-                    parameters: parameters
-                ) as any Tool
-            }
-        }
     }
 
     func clampTemperature(_ value: Double) -> Double {

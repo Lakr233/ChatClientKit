@@ -47,7 +47,11 @@
             let options: GenerationOptions
             let contextOptions: ContextOptions
             let historyEntries: Int
+            /// Tools passed to the session.
             let tools: Int
+            /// Names of tools left out because their schema could not be
+            /// converted; the request goes on without them.
+            let skippedTools: [String]
             let instructionsLength: Int
         }
 
@@ -63,16 +67,11 @@
         }
 
         func makeSessionContext(body: ChatRequestBody) throws -> SessionContext {
-            let tools: [any Tool] = try body.selectedTools().map { tool -> any Tool in
-                switch tool {
-                case let .function(name, description, parameters, _):
-                    try AppleIntelligenceToolProxy(
-                        name: name,
-                        description: description,
-                        parameters: parameters
-                    )
-                }
-            }
+            let conversion = try AppleIntelligenceToolProxy.makeProxies(
+                from: body.selectedTools(),
+                toolChoice: body.toolChoice
+            )
+            let tools = conversion.tools
 
             let instructionText = AppleIntelligencePromptBuilder.makeInstructions(
                 persona: configuration.persona,
@@ -121,6 +120,7 @@
                 contextOptions: contextOptions,
                 historyEntries: history.count,
                 tools: tools.count,
+                skippedTools: conversion.skipped.map(\.name),
                 instructionsLength: instructionText.count
             )
         }
