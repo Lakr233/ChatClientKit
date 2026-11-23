@@ -33,6 +33,14 @@ struct RemoteResponsesRequestBuilder {
         body: ResponsesRequestBody,
         additionalField: [String: Any]
     ) throws -> URLRequest {
+        try makeRequest(body: body, additionalField: additionalField, preProcessor: nil)
+    }
+
+    func makeRequest(
+        body: ResponsesRequestBody,
+        additionalField: [String: Any],
+        preProcessor: PreProcessor?
+    ) throws -> URLRequest {
         guard let baseURL else {
             logger.error("invalid base URL for responses client")
             throw RemoteResponsesChatClient.Error.invalidURL
@@ -86,6 +94,11 @@ struct RemoteResponsesRequestBuilder {
                 withJSONObject: originalDictionary,
                 options: [.sortedKeys]
             )
+        }
+
+        // pre_process script gets the last word (mirror of completions builder).
+        if let preProcessor {
+            request = try preProcessor.apply(to: request)
         }
 
         logger.debug("constructed responses request URL: \(url.absoluteString)")

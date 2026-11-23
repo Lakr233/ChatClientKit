@@ -72,15 +72,37 @@ public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
     public func streamingChat(
         body: ChatRequestBody
     ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
-        let requestBody = resolve(body: body, stream: true)
-        let request = try makeURLRequest(body: requestBody)
+        try await streamingChat(body: body, scripting: nil)
+    }
+
+    public func streamingChat(
+        body: ChatRequestBody,
+        scripting: ChatScriptingHandle?
+    ) async throws -> AnyAsyncSequence<ChatResponseChunk> {
+        // Resolve to the sanitized ChatRequestBody first so chatSession in JS
+        // reflects the same model/stream fields as the actual HTTP request.
+        let resolvedChat = sanitizeChat(body: body, stream: true)
+        let requestBody = requestTransformer.makeRequestBody(from: resolvedChat, model: model, stream: true)
+
+        let runtime: ScriptRuntime?
+        if let scripting, scripting.config.hasAnyStage {
+            runtime = try ScriptRuntime.make(body: resolvedChat, handle: scripting)
+        } else {
+            runtime = nil
+        }
+
+        let request = try makeURLRequest(
+            body: requestBody,
+            preProcessor: runtime?.preProcessor
+        )
         let this = self
         logger.info("starting streaming responses request to model: \(this.model) with \(body.messages.count) messages, temperature: \(body.temperature ?? 1.0)")
 
         let processor = RemoteResponsesChatStreamProcessor(
             eventSourceFactory: eventSourceFactory,
             chunkDecoder: chunkDecoderFactory(),
-            errorExtractor: errorExtractor
+            errorExtractor: errorExtractor,
+            postProcessor: runtime?.postProcessor
         )
 
         return processor.stream(request: request) { [weak self] error in
@@ -100,15 +122,33 @@ extension RemoteResponsesChatClient {
     }
 
     func makeURLRequest(body: ResponsesRequestBody) throws -> URLRequest {
+        try makeURLRequest(body: body, preProcessor: nil)
+    }
+
+    func makeURLRequest(
+        body: ResponsesRequestBody,
+        preProcessor: PreProcessor?
+    ) throws -> URLRequest {
         let builder = makeRequestBuilder()
-        return try builder.makeRequest(body: body, additionalField: additionalBodyField)
+        return try builder.makeRequest(
+            body: body,
+            additionalField: additionalBodyField,
+            preProcessor: preProcessor
+        )
+    }
+
+    /// Merge adjacent assistant messages, set model/stream, and sanitize.
+    /// Returns the sanitized `ChatRequestBody` used both for `ScriptRuntime`
+    /// and as the source for `requestTransformer`.
+    func sanitizeChat(body: ChatRequestBody, stream: Bool) -> ChatRequestBody {
+        var resolved = body.mergingAdjacentAssistantMessages()
+        resolved.model = model
+        resolved.stream = stream
+        return requestSanitizer.sanitize(resolved)
     }
 
     func resolve(body: ChatRequestBody, stream: Bool) -> ResponsesRequestBody {
-        var requestBody = body.mergingAdjacentAssistantMessages()
-        requestBody.model = model
-        requestBody.stream = stream
-        let sanitized = requestSanitizer.sanitize(requestBody)
+        let sanitized = sanitizeChat(body: body, stream: stream)
         return requestTransformer.makeRequestBody(from: sanitized, model: model, stream: stream)
     }
 
