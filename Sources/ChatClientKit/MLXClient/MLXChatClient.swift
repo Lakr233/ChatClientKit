@@ -1,5 +1,5 @@
 import Foundation
-@preconcurrency import MLXLMCommon
+@preconcurrency internal import MLXLMCommon
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 public class MLXChatClient: ChatService, @unchecked Sendable {
@@ -14,8 +14,20 @@ public class MLXChatClient: ChatService, @unchecked Sendable {
 
     public init(
         url: URL,
+        preferredKind: MLXModelKind = .llm
+    ) {
+        modelConfiguration = .init(
+            directory: url,
+            toolCallFormat: MLXToolCallFormatDetector.detect(in: url)
+        )
+        self.preferredKind = preferredKind
+        coordinator = MLXModelCoordinator.shared
+    }
+
+    init(
+        url: URL,
         preferredKind: MLXModelKind = .llm,
-        coordinator: MLXModelCoordinating = MLXModelCoordinator.shared
+        coordinator: MLXModelCoordinating
     ) {
         modelConfiguration = .init(
             directory: url,

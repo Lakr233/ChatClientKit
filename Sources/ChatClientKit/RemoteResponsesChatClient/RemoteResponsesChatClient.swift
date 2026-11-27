@@ -1,5 +1,4 @@
 import Foundation
-import ServerEvent
 
 public class RemoteResponsesChatClient: ChatService, @unchecked Sendable {
     public let model: String

@@ -1,12 +1,12 @@
 import Foundation
-import MLXLMCommon
-import Tokenizers
+internal import MLXLMCommon
+internal import Tokenizers
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-public struct DefaultMLXTokenizerLoader: TokenizerLoader {
-    public init() {}
+struct DefaultMLXTokenizerLoader: TokenizerLoader {
+    init() {}
 
-    public func load(from directory: URL) async throws -> any MLXLMCommon.Tokenizer {
+    func load(from directory: URL) async throws -> any MLXLMCommon.Tokenizer {
         let upstream = try await AutoTokenizer.from(directory: directory)
         return TokenizerBridge(upstream)
     }

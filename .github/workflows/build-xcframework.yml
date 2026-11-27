@@ -1,0 +1,166 @@
+name: Build XCFramework
+
+on:
+  workflow_dispatch:
+    inputs:
+      mlx_swift_lm_ref:
+        description: "Optional mlx-swift-lm ref (`latest` or 40-char SHA). Leave empty to keep Upstream.versions."
+        required: false
+        type: string
+      release_package:
+        description: "Dispatch Release Package after publishing the binary release."
+        required: false
+        type: boolean
+        default: true
+      package_version:
+        description: "Optional semantic package version (e.g. 2.5.0). Leave empty to bump patch."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: build-xcframework
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan Release
+    runs-on: ubuntu-latest
+    outputs:
+      mlx_swift_lm_ref: ${{ steps.plan.outputs.mlx_swift_lm_ref }}
+      binary_tag: ${{ steps.plan.outputs.binary_tag }}
+      package_version: ${{ steps.plan.outputs.package_version }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve Pin & Tags
+        id: plan
+        env:
+          REQUESTED_REF: ${{ inputs.mlx_swift_lm_ref }}
+          RELEASE_PACKAGE: ${{ inputs.release_package }}
+          REQUESTED_PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          set -euo pipefail
+          eval "$(./Script/resolve-upstream.sh "$REQUESTED_REF")"
+          BINARY_TAG=$(./Script/next-tag.sh binary)
+          PACKAGE_VERSION=""
+          if [ "$RELEASE_PACKAGE" = "true" ]; then
+            PACKAGE_VERSION=${REQUESTED_PACKAGE_VERSION:-$(./Script/next-tag.sh package)}
+            if ! echo "$PACKAGE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "[!] Invalid package_version: $PACKAGE_VERSION" >&2
+              exit 1
+            fi
+            if ./Script/next-tag.sh exists "$PACKAGE_VERSION"; then
+              echo "[!] Package tag already exists: $PACKAGE_VERSION" >&2
+              exit 1
+            fi
+          fi
+          {
+            echo "mlx_swift_lm_ref=$MLX_SWIFT_LM_REF"
+            echo "binary_tag=$BINARY_TAG"
+            echo "package_version=$PACKAGE_VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build & Publish XCFramework
+    needs: plan
+    runs-on: macos-26
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Select Xcode & Install Metal Toolchain
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+          xcodebuild -downloadComponent MetalToolchain
+
+      - name: Pin Upstream
+        run: ./Script/resolve-upstream.sh "${{ needs.plan.outputs.mlx_swift_lm_ref }}" --write
+
+      - name: Build & Verify XCFramework
+        run: ./Script/build.sh
+
+      - name: Package Binary Tests
+        run: ./Script/test.sh
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChatClientKit.xcframework
+          path: build/ChatClientKit.xcframework.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Commit Upstream Pin
+        id: pin
+        env:
+          MLX_SWIFT_LM_REF: ${{ needs.plan.outputs.mlx_swift_lm_ref }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Upstream.versions
+          if ! git diff --cached --quiet; then
+            git commit -m "Pin mlx-swift-lm to ${MLX_SWIFT_LM_REF:0:12}"
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase --autostash "origin/$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Binary Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.plan.outputs.binary_tag }}
+          MLX_SWIFT_LM_REF: ${{ needs.plan.outputs.mlx_swift_lm_ref }}
+          TARGET_SHA: ${{ steps.pin.outputs.sha }}
+        run: |
+          set -euo pipefail
+          rc=0
+          ./Script/next-tag.sh exists "$TAG" || rc=$?
+          case "$rc" in
+            0)
+              echo "[!] Binary tag $TAG already exists. Re-run the workflow to pick the next rev." >&2
+              exit 1
+              ;;
+            1) ;;
+            *) exit "$rc" ;;
+          esac
+          SHA256=$(shasum -a 256 build/ChatClientKit.xcframework.zip | awk '{print $1}')
+          NOTES="$RUNNER_TEMP/binary-release-notes.md"
+          {
+            echo "Prebuilt ChatClientKit XCFramework (macOS, iOS, iOS Simulator, Mac Catalyst)."
+            echo
+            echo "- ChatClientKit commit: \`$TARGET_SHA\`"
+            echo "- mlx-swift-lm: \`$MLX_SWIFT_LM_REF\`"
+            echo "- Xcode: $(xcodebuild -version | tr '\n' ' ')"
+            echo "- SHA256: \`$SHA256\`"
+            echo
+            echo "Binary-only release. To add ChatClientKit to a Swift package, use a versioned package release instead."
+          } > "$NOTES"
+          gh release create "$TAG" \
+            --target "$TARGET_SHA" \
+            --latest=false \
+            --title "ChatClientKit XCFramework $TAG" \
+            --notes-file "$NOTES" \
+            build/ChatClientKit.xcframework.zip
+
+      - name: Dispatch Release Package
+        if: needs.plan.outputs.package_version != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.plan.outputs.binary_tag }}
+          VERSION: ${{ needs.plan.outputs.package_version }}
+        run: |
+          gh workflow run release-package.yml \
+            --ref "$GITHUB_REF_NAME" \
+            -f package_version="$VERSION" \
+            -f binary_tag="$TAG"

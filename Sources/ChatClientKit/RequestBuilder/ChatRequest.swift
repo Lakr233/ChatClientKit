@@ -218,7 +218,7 @@ extension ChatRequest {
     }
 
     /// Merge adjacent assistant messages so the upstream API receives a single, coherent turn.
-    static func mergeAssistantMessages(_ messages: [Message]) -> [Message] {
+    public static func mergeAssistantMessages(_ messages: [Message]) -> [Message] {
         var result: [Message] = []
         var pending: PendingAssistant?
 

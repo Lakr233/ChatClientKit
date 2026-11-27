@@ -53,7 +53,7 @@ public struct ServerSentEvent: EVEvent {
     public var other: [String: String]?
     public var time: String?
 
-    init(
+    public init(
         id: String? = nil,
         event: String? = nil,
         data: String? = nil,
@@ -137,7 +137,7 @@ extension Data {
     }
 }
 
-package extension Array {
+extension Array {
     subscript(safe index: Int) -> Element? {
         guard index >= 0, index < endIndex else {
             return nil

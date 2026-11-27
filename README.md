@@ -2,9 +2,11 @@
 
 ChatClientKit is a Swift Package that unifies remote LLM APIs, local MLX models, and Apple Intelligence into a single, streaming-first interface. It ships with an ergonomic request DSL, rich tool-calling support, and a flexible error-collection pipeline so you can embed conversational AI in macOS, iOS, and Catalyst apps without rewriting clients per provider.
 
-## When Building Fails
+## Prebuilt XCFramework
 
-`ChatClientKit` relies on `mlx-swift-lm`, which may not always provide up-to-date releases. If you encounter build issues, add `mlx-swift-lm` directly to your workspace and override this package by using the `main` branch.
+Release tags ship a self-contained dynamic `ChatClientKit.xcframework` via GitHub Releases for macOS (arm64, x86_64), iOS (arm64), iOS Simulator (arm64, x86_64), and Mac Catalyst (arm64, x86_64) with `MLX` (including compiled Metal shaders), `mlx-swift-lm`, `swift-tokenizers`, and `ServerEvent` already linked in—requiring zero external SwiftPM dependencies in consuming apps.
+
+For source development inside this repository, set `CHATCLIENTKIT_USE_SOURCE=1` to build and test directly from `Sources/`. See [AGENTS.md](AGENTS.md) for local XCFramework rebuild and release workflow instructions.
 
 ## Highlights
 
@@ -26,7 +28,7 @@ ChatClientKit is a Swift Package that unifies remote LLM APIs, local MLX models,
 ```swift
 // In Package.swift
 dependencies: [
-    .package(url: "https://github.com/your-org/ChatClientKit.git", branch: "main")
+    .package(url: "https://github.com/Lakr233/ChatClientKit.git", from: "2.4.8")
 ],
 targets: [
     .target(
@@ -37,8 +39,6 @@ targets: [
     )
 ]
 ```
-
-> If you vend the Logger dependency separately, keep the relative path declared in `Package.swift` or adjust to your organization’s logging package.
 
 ## Usage
 

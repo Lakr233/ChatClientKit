@@ -1,8 +1,8 @@
 import Foundation
-import FoundationModels
+internal import FoundationModels
 
-enum AppleIntelligencePromptBuilder {
-    static func makeInstructions(
+public enum AppleIntelligencePromptBuilder {
+    public static func makeInstructions(
         persona: String,
         messages: [ChatRequestBody.Message],
         additionalDirectives: [String]
@@ -34,7 +34,7 @@ enum AppleIntelligencePromptBuilder {
     /// The text passed to the session as this round's prompt: the latest user
     /// message, verbatim. A role label would make it read as a line of a log,
     /// which the on-device model then narrates instead of answering.
-    static func makePrompt(from messages: [ChatRequestBody.Message]) -> String {
+    public static func makePrompt(from messages: [ChatRequestBody.Message]) -> String {
         guard let index = latestUserIndex(in: messages) else { return continuationPrompt }
         guard case let .user(content, _) = messages[index] else { return continuationPrompt }
         return extractTextFromUser(content).trimmingCharacters(in: .whitespacesAndNewlines)

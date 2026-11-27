@@ -23,6 +23,13 @@ playground.xcworkspace
 # Packages/
 # Package.pins
 # Package.resolved
+
+# XCFramework packaging outputs
+BinaryTarget/
+References/
+build/
+__pycache__/
+*.pyc
 # *.xcodeproj
 #
 # Xcode automatically generates this directory with a .xcworkspacedata file and xcuserdata
@@ -92,3 +99,10 @@ Temporary Items
 .apdisk
 
 Package.resolved
+
+# XCFramework packaging outputs
+BinaryTarget/
+References/
+build/
+__pycache__/
+*.pyc

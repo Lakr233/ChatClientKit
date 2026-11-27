@@ -1,5 +1,5 @@
 import Foundation
-import MLXLMCommon
+internal import MLXLMCommon
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 enum MLXToolCallFormatDetector {

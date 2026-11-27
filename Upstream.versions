@@ -1,0 +1,11 @@
+# Pinned upstream dependencies used to assemble ChatClientKit.xcframework.
+# SHA pins are full 40-character lowercase commit hashes.
+#
+# Re-pin mlx-swift-lm with: ./Script/resolve-upstream.sh <ref|latest> --write
+
+MLX_SWIFT_LM_REPO=https://github.com/ml-explore/mlx-swift-lm.git
+MLX_SWIFT_LM_REF=026d599e52f3a2cebbecbd5b3f318b800a73ff02
+MLX_SWIFT_REPO=https://github.com/ml-explore/mlx-swift.git
+MLX_SWIFT_VERSION=0.33.0
+SWIFT_TOKENIZERS_REPO=https://github.com/DePasqualeOrg/swift-tokenizers.git
+SWIFT_TOKENIZERS_VERSION=0.4.3

@@ -1,5 +1,6 @@
 @testable import ChatClientKit
 import Foundation
+import MLXLLM
 import MLXLMCommon
 import Testing
 
@@ -178,5 +179,15 @@ struct MLXLocalModelAPITests {
         #expect(high.maxTokens == 1)
         #expect(high.temperature == 0.6)
         #expect(low.temperature == 0)
+    }
+
+    @Test
+    func `Selected MLX validation model is registered and xmlFunction tool format is available`() {
+        let modelID = "mlx-community/Qwen3.5-2B-4bit"
+        let configuration = LLMRegistry.shared.configuration(id: modelID)
+
+        #expect(configuration.name == modelID)
+        #expect(LLMRegistry.shared.contains(id: modelID))
+        #expect(ToolCallFormat.allCases.contains(.xmlFunction))
     }
 }

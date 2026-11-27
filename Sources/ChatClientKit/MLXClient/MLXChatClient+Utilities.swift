@@ -6,9 +6,9 @@
 //
 
 import Foundation
-import MLXLLM
-@preconcurrency import MLXLMCommon
-import MLXVLM
+internal import MLXLLM
+@preconcurrency internal import MLXLMCommon
+internal import MLXVLM
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 extension MLXChatClient {

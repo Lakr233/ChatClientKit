@@ -6,9 +6,10 @@
 //
 
 import Foundation
-@preconcurrency import MLXLLM
-@preconcurrency import MLXLMCommon
-@preconcurrency import MLXVLM
+@preconcurrency internal import MLX
+@preconcurrency internal import MLXLLM
+@preconcurrency internal import MLXLMCommon
+@preconcurrency internal import MLXVLM
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
 public enum MLXModelKind: Equatable, Sendable {
@@ -17,7 +18,7 @@ public enum MLXModelKind: Equatable, Sendable {
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-public protocol MLXModelCoordinating: Sendable {
+protocol MLXModelCoordinating: Sendable {
     func container(
         for configuration: ModelConfiguration,
         kind: MLXModelKind
@@ -27,7 +28,7 @@ public protocol MLXModelCoordinating: Sendable {
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-public protocol MLXModelLoading: Sendable {
+protocol MLXModelLoading: Sendable {
     func loadLLM(
         configuration: ModelConfiguration,
         tokenizerLoader: any TokenizerLoader
@@ -39,11 +40,11 @@ public protocol MLXModelLoading: Sendable {
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-public enum MLXModelLoaderError: LocalizedError, Sendable {
+enum MLXModelLoaderError: LocalizedError, Sendable {
     case tokenizerLoaderUnavailable
     case unsupportedModelSource(ModelConfiguration.Identifier)
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .tokenizerLoaderUnavailable:
             "A tokenizer loader is required to use local MLX models with the current mlx-swift-lm."
@@ -54,20 +55,20 @@ public enum MLXModelLoaderError: LocalizedError, Sendable {
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-public struct UnavailableMLXTokenizerLoader: TokenizerLoader {
-    public init() {}
+struct UnavailableMLXTokenizerLoader: TokenizerLoader {
+    init() {}
 
-    public func load(from directory: URL) async throws -> any Tokenizer {
+    func load(from directory: URL) async throws -> any Tokenizer {
         _ = directory
         throw MLXModelLoaderError.tokenizerLoaderUnavailable
     }
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-public struct DefaultMLXModelLoader: MLXModelLoading {
-    public init() {}
+struct DefaultMLXModelLoader: MLXModelLoading {
+    init() {}
 
-    public func loadLLM(
+    func loadLLM(
         configuration: ModelConfiguration,
         tokenizerLoader: any TokenizerLoader
     ) async throws -> ModelContainer {
@@ -78,7 +79,7 @@ public struct DefaultMLXModelLoader: MLXModelLoading {
         )
     }
 
-    public func loadVLM(
+    func loadVLM(
         configuration: ModelConfiguration,
         tokenizerLoader: any TokenizerLoader
     ) async throws -> ModelContainer {
@@ -100,8 +101,12 @@ public struct DefaultMLXModelLoader: MLXModelLoading {
 }
 
 @available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
-public actor MLXModelCoordinator: MLXModelCoordinating {
+public actor MLXModelCoordinator {
     public nonisolated static let shared = MLXModelCoordinator()
+
+    public nonisolated static func clearMemoryCache() {
+        MLX.Memory.clearCache()
+    }
 
     struct CacheKey: Equatable {
         let identifier: ModelConfiguration.Identifier
@@ -114,7 +119,7 @@ public actor MLXModelCoordinator: MLXModelCoordinating {
     var cachedContainer: ModelContainer?
     var pendingTask: Task<ModelContainer, Error>?
 
-    public init(
+    init(
         loader: MLXModelLoading = DefaultMLXModelLoader(),
         tokenizerLoader: any TokenizerLoader = DefaultMLXTokenizerLoader()
     ) {
@@ -122,7 +127,7 @@ public actor MLXModelCoordinator: MLXModelCoordinating {
         self.tokenizerLoader = tokenizerLoader
     }
 
-    public func container(
+    func container(
         for configuration: ModelConfiguration,
         kind: MLXModelKind
     ) async throws -> ModelContainer {
@@ -180,3 +185,6 @@ public actor MLXModelCoordinator: MLXModelCoordinating {
         pendingTask = nil
     }
 }
+
+@available(iOS 17.0, macOS 14.0, macCatalyst 17.0, *)
+extension MLXModelCoordinator: MLXModelCoordinating {}

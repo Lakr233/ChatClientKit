@@ -28,7 +28,7 @@ public struct ToolRequest: Codable, Equatable, Hashable, Sendable {
         case args
     }
 
-    init(
+    public init(
         id: String? = nil,
         name: String,
         args: String,

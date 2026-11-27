@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import ServerEvent
 
 struct RemoteCompletionsChatStreamProcessor {
     let eventSourceFactory: EventSourceProducing

@@ -1,6 +1,6 @@
 
 import Foundation
-import FoundationModels
+internal import FoundationModels
 
 @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
 public class AppleIntelligenceChatClient: ChatService, @unchecked Sendable {

@@ -256,9 +256,9 @@ public extension ChatRequestBody.Message.ContentPart {
 
 public extension ChatRequestBody.Message {
     struct ToolCall: Sendable, Encodable {
-        let id: String
-        let type = "function"
-        let function: Function
+        public let id: String
+        public let type = "function"
+        public let function: Function
         /// Provider-specific fields received with the call (see
         /// `ToolRequest.extraFields`), encoded back next to the standard
         /// keys. Nil leaves the payload exactly `id`, `type`, `function`.

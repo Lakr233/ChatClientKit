@@ -1,6 +1,6 @@
 #if compiler(>=6.4)
     import Foundation
-    import FoundationModels
+    internal import FoundationModels
 
     /// Streams replies from Apple's Private Cloud Compute model through the
     /// same prompt, transcript and tool bridge as `AppleIntelligenceChatClient`:

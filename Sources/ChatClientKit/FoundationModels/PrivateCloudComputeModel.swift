@@ -1,6 +1,6 @@
 #if compiler(>=6.4)
     import Foundation
-    import FoundationModels
+    public import FoundationModels
 
     /// Wraps `PrivateCloudComputeLanguageModel` and maps its state onto the
     /// FoundationModels-free types in `PrivateCloudComputeState.swift`.

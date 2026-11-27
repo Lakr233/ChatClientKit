@@ -1,0 +1,105 @@
+name: Release Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: "Semantic package version to publish (e.g. 2.5.0)."
+        required: true
+        type: string
+      binary_tag:
+        description: "Published binary release tag (e.g. xcframework.<sha>.1)."
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-package
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Validate Inputs & Download Binary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+          BINARY_TAG: ${{ inputs.binary_tag }}
+        run: |
+          set -euo pipefail
+          if ! echo "$PACKAGE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "[!] Invalid package_version: $PACKAGE_VERSION" >&2
+            exit 1
+          fi
+          if ! echo "$BINARY_TAG" | grep -Eq '^xcframework\.[0-9a-f]+\.[0-9]+$'; then
+            echo "[!] Invalid binary_tag (expected xcframework.<sha>.<rev>): $BINARY_TAG" >&2
+            exit 1
+          fi
+          git fetch --tags origin
+          if git rev-parse "refs/tags/$PACKAGE_VERSION" >/dev/null 2>&1; then
+            echo "[!] Package tag already exists: $PACKAGE_VERSION" >&2
+            exit 1
+          fi
+          if ! gh release view "$BINARY_TAG" --json assets --jq '.assets[].name' | grep -qx 'ChatClientKit.xcframework.zip'; then
+            echo "[!] Release $BINARY_TAG is missing ChatClientKit.xcframework.zip" >&2
+            exit 1
+          fi
+          mkdir -p build
+          gh release download "$BINARY_TAG" --pattern ChatClientKit.xcframework.zip --dir build --clobber
+          ./Script/verify-xcframework.sh build/ChatClientKit.xcframework.zip
+
+      - name: Write Release Manifest
+        env:
+          BINARY_TAG: ${{ inputs.binary_tag }}
+        run: |
+          ./Script/build-manifest.sh build/ChatClientKit.xcframework.zip \
+            "https://github.com/$GITHUB_REPOSITORY/releases/download/$BINARY_TAG/ChatClientKit.xcframework.zip"
+
+      - name: Verify Package Manifest
+        run: ./Script/test.sh
+
+      - name: Commit & Publish Package Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+          BINARY_TAG: ${{ inputs.binary_tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Package.swift
+          if ! git diff --cached --quiet; then
+            git commit -m "Release $PACKAGE_VERSION ($BINARY_TAG)"
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+          SHA256=$(shasum -a 256 build/ChatClientKit.xcframework.zip | awk '{print $1}')
+          NOTES="$RUNNER_TEMP/package-release-notes.md"
+          {
+            echo "ChatClientKit $PACKAGE_VERSION"
+            echo
+            echo "Prebuilt dynamic XCFramework (macOS, iOS, iOS Simulator, Mac Catalyst) bundling MLX, mlx-swift-lm, swift-tokenizers, and ServerEvent."
+            echo
+            echo "- Binary release: \`$BINARY_TAG\` / \`ChatClientKit.xcframework.zip\`"
+            echo "- SHA256: \`$SHA256\`"
+          } > "$NOTES"
+          gh release create "$PACKAGE_VERSION" \
+            --target "$(git rev-parse HEAD)" \
+            --latest \
+            --title "ChatClientKit $PACKAGE_VERSION" \
+            --notes-file "$NOTES"

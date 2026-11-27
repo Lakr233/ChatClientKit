@@ -7,7 +7,7 @@
 
 import Foundation
 
-package extension Data {
+extension Data {
     func trimmingPrefix(while predicate: (Element) -> Bool) -> SubSequence {
         let start = endOfPrefix(while: predicate)
         return self[start ..< endIndex]

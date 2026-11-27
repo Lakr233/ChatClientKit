@@ -7,9 +7,9 @@
 
 import CoreImage
 import Foundation
-@preconcurrency import MLXLLM
-@preconcurrency import MLXLMCommon
-@preconcurrency import MLXVLM
+@preconcurrency internal import MLXLLM
+@preconcurrency internal import MLXLMCommon
+@preconcurrency internal import MLXVLM
 
 private struct UnsafeSendableBox<Value>: @unchecked Sendable {
     let value: Value

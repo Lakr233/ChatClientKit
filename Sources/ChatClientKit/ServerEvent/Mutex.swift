@@ -13,14 +13,14 @@ import Foundation
 #if hasFeature(StaticExclusiveOnly)
     @_staticExclusiveOnly
 #endif
-package struct Mutex<Value: ~Copyable>: ~Copyable {
+struct Mutex<Value: ~Copyable>: ~Copyable {
     let _lock = NSLock()
     let _box: Box
 
     /// Initializes a value of this mutex with the given initial state.
     ///
     /// - Parameter initialValue: The initial value to give to the mutex.
-    package init(_ initialValue: consuming sending Value) {
+    init(_ initialValue: consuming sending Value) {
         _box = Box(initialValue)
     }
 
@@ -34,7 +34,7 @@ package struct Mutex<Value: ~Copyable>: ~Copyable {
 
 extension Mutex: @unchecked Sendable where Value: ~Copyable {}
 
-package extension Mutex where Value: ~Copyable {
+extension Mutex where Value: ~Copyable {
     /// Calls the given closure after acquiring the lock and then releases ownership.
     borrowing func withLock<Result: ~Copyable, E: Error>(
         _ body: (inout sending Value) throws(E) -> sending Result
@@ -54,7 +54,7 @@ package extension Mutex where Value: ~Copyable {
     }
 }
 
-package extension Mutex where Value == Void {
+extension Mutex where Value == Void {
     borrowing func _unsafeLock() {
         _lock.lock()
     }

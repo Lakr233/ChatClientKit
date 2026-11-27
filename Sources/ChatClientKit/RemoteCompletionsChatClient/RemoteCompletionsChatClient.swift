@@ -1,5 +1,4 @@
 import Foundation
-import ServerEvent
 
 public final class RemoteCompletionsChatClient: ChatService {
     public let model: String

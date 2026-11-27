@@ -5,7 +5,7 @@ public enum AppleIntelligenceAvailabilityState: Sendable, Equatable {
     case unavailable(String)
 }
 
-import FoundationModels
+internal import FoundationModels
 
 @available(iOS 26.0, macOS 26, macCatalyst 26.0, *)
 public final class AppleIntelligenceModel: Sendable {
