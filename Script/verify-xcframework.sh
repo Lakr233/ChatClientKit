@@ -202,7 +202,11 @@ for library in libraries:
     raw_binary = open(os.path.realpath(binary), "rb").read()
     for prefix in forbidden_path_prefixes:
         if prefix.encode("utf-8") in raw_binary:
-            raise SystemExit(f"[!] {identifier} binary contains leaked host path prefix: {prefix}")
+            samples = [
+                line for line in subprocess.check_output(["strings", binary], text=True, errors="ignore").splitlines()
+                if prefix in line
+            ][:5]
+            raise SystemExit(f"[!] {identifier} binary contains leaked host path prefix: {prefix} (samples: {samples})")
 
     swiftmodule = os.path.join(framework, "Modules", "ChatClientKit.swiftmodule")
     if not os.path.isdir(swiftmodule):

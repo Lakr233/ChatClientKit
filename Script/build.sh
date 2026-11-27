@@ -116,6 +116,38 @@ if ! xcodebuild \
     exit 1
 fi
 
+# Strip host checkout and DerivedData prefixes from C/C++/ObjC __FILE__ macros
+# across static SwiftPM dependencies (such as Cmlx / fmt) without breaking dsymutil
+# module lookups during archive generation.
+PREFIX_MAP_XCCONFIG="$ROOT_DIR/build/prefix-map.xcconfig"
+PREFIX_MAP_FLAGS=""
+append_prefix_map() {
+    local raw_from="$1"
+    local to="$2"
+    [ -n "$raw_from" ] || return 0
+    PREFIX_MAP_FLAGS="$PREFIX_MAP_FLAGS -fmacro-prefix-map=$raw_from=$to"
+    if [ -d "$raw_from" ]; then
+        local resolved_from
+        resolved_from=$(cd "$raw_from" && pwd -P)
+        if [ "$resolved_from" != "$raw_from" ]; then
+            PREFIX_MAP_FLAGS="$PREFIX_MAP_FLAGS -fmacro-prefix-map=$resolved_from=$to"
+        fi
+    fi
+}
+
+SOURCE_PACKAGES_DIR="${PACKAGE_CACHE_PATH:-$DERIVED_DATA/SourcePackages}"
+append_prefix_map "$SOURCE_PACKAGES_DIR" "SourcePackages"
+append_prefix_map "$DERIVED_DATA" "DerivedData"
+append_prefix_map "$ROOT_DIR" "ChatClientKit"
+if [ -n "${HOME:-}" ] && [ "$HOME" != "/" ]; then
+    append_prefix_map "$HOME" "Home"
+fi
+
+cat >"$PREFIX_MAP_XCCONFIG" <<EOF
+OTHER_CFLAGS = \$(inherited)$PREFIX_MAP_FLAGS
+OTHER_CPLUSPLUSFLAGS = \$(inherited)$PREFIX_MAP_FLAGS
+EOF
+
 stage_metallib() {
     local slice_name="$1"
     local build_products_subdir="$2"
@@ -191,6 +223,7 @@ archive_platform() {
         -archivePath "$archive_path"
         -derivedDataPath "$DERIVED_DATA"
         -configuration Release
+        -xcconfig "$PREFIX_MAP_XCCONFIG"
         -skipMacroValidation
         -skipPackagePluginValidation
         "${COMMON_PKG_ARGS[@]+"${COMMON_PKG_ARGS[@]}"}"
