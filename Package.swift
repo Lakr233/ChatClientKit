@@ -11,32 +11,7 @@ let hasLocalXCFramework = FileManager.default.fileExists(
 let useSource = ProcessInfo.processInfo.environment["CHATCLIENTKIT_USE_SOURCE"] == "1"
 
 let package: Package
-if hasLocalXCFramework && !useSource {
-    package = Package(
-        name: "ChatClientKit",
-        defaultLocalization: "en",
-        platforms: [
-            .macOS(.v14),
-            .iOS(.v17),
-            .macCatalyst(.v17),
-        ],
-        products: [
-            .library(name: "ChatClientKit", targets: ["ChatClientKit"]),
-            .library(name: "ServerEvent", targets: ["ServerEvent"]),
-        ],
-        targets: [
-            .binaryTarget(name: "ChatClientKit", path: localXCFramework),
-            .target(
-                name: "ServerEvent",
-                dependencies: ["ChatClientKit"]
-            ),
-            .testTarget(
-                name: "ChatClientKitBinaryTests",
-                dependencies: ["ChatClientKit", "ServerEvent"]
-            ),
-        ]
-    )
-} else {
+if useSource {
     package = Package(
         name: "ChatClientKit",
         defaultLocalization: "en",
@@ -77,6 +52,39 @@ if hasLocalXCFramework && !useSource {
                 resources: [
                     .copy("Fixtures"),
                 ]
+            ),
+            .testTarget(
+                name: "ChatClientKitBinaryTests",
+                dependencies: ["ChatClientKit", "ServerEvent"]
+            ),
+        ]
+    )
+} else {
+    let binaryTarget: Target = hasLocalXCFramework
+        ? .binaryTarget(name: "ChatClientKit", path: localXCFramework)
+        : .binaryTarget(
+            name: "ChatClientKit",
+            url: "https://github.com/Lakr233/ChatClientKit/releases/download/xcframework.577eb77a4110.1/ChatClientKit.xcframework.zip",
+            checksum: "34a612ea2262090c3f01f3d1382d2932353404490b7990b3a3e7173ba0b4487c"
+        )
+
+    package = Package(
+        name: "ChatClientKit",
+        defaultLocalization: "en",
+        platforms: [
+            .macOS(.v14),
+            .iOS(.v17),
+            .macCatalyst(.v17),
+        ],
+        products: [
+            .library(name: "ChatClientKit", targets: ["ChatClientKit"]),
+            .library(name: "ServerEvent", targets: ["ServerEvent"]),
+        ],
+        targets: [
+            binaryTarget,
+            .target(
+                name: "ServerEvent",
+                dependencies: ["ChatClientKit"]
             ),
             .testTarget(
                 name: "ChatClientKitBinaryTests",
